@@ -3,6 +3,7 @@
 
 import os
 import sys
+import re
 import gzip
 import sqlite3 as sql
 import subprocess
@@ -14,9 +15,22 @@ paths = {}
 paths['sharedir'] = '.'
 paths['database'] = os.path.join(paths['sharedir'], 'jmdict.sqlite')
 
+regexp_store = {}
+def get_regex(pattern):
+    if pattern in regexp_store.keys():
+        return regexp_store[pattern]
+    else:
+        comp = re.compile(pattern, re.I)
+        regexp_store[pattern] = comp
+        return comp
+
+def regexp(pattern, field):
+    reg = get_regex(pattern)
+    return reg.search(field) is not None
 
 def opendb():
     con = sql.connect(paths['database'])
+    con.create_function('regexp', 2, regexp)
     cur = con.cursor()
     return con, cur
 
@@ -85,6 +99,7 @@ def create_table(cur):
     cur.execute('''
       CREATE INDEX senses_sense ON senses (sense);
     ''')
+
 
 def insert_entry(cur, ent_seq, kanjis, readings, senses):
     cur.execute('INSERT INTO entries(ent_seq) VALUES (?);', [ent_seq])
@@ -158,7 +173,7 @@ def fetch_and_format_entries(cur, entries):
         lines.append(format_entry(kanjis, readings, senses))
     return lines
 
-def search_by(cur, field, query, partial=False):
+def search_by(cur, field, query, partial=False, regexp=False):
     if field == 'kanji':
         table = 'kanjis'
     elif field == 'reading':
@@ -166,16 +181,23 @@ def search_by(cur, field, query, partial=False):
     elif field == 'sense':
         table = 'senses'
 
-    if partial:
+    if regexp:
+        operator = 'REGEXP'
+    else:
+        operator = 'LIKE'
+
+    if partial and not regexp:
         query = '%' + query + '%'
+    elif regexp and not partial:
+        query = '^' + query + '$'
 
     cur.execute('''
 SELECT ent_seq
 FROM entries
   NATURAL INNER JOIN %s
-WHERE %s.%s LIKE ?
+WHERE %s.%s %s ?
 ;'''
-                % (table, table, field),
+                % (table, table, field, operator),
                 [query])
 
     res = []
@@ -197,8 +219,13 @@ if __name__ == '__main__':
     ap.add_argument('-s', '--by-sense', metavar='QUERY',
                     help="Search entry with sense field (English translation) matching query")
 
+
     ap.add_argument('-p', '--partial', action='store_true',
                     help="Search partial matches")
+
+    ap.add_argument('-x', '--regexp', action='store_true',
+                    help="Regular expression search")
+
 
     ap.add_argument('--db-update', nargs='?', const='./JMdict_e.gz', default=None, metavar='./JMdict_e.gz',
                     help="Update myougiden database with new JMdict_e.gz file.  Optional argument is path to JMdict.")
@@ -238,6 +265,6 @@ if __name__ == '__main__':
 
     if query:
         con, cur = opendb()
-        entries = search_by(cur, field, query, partial=args.partial)
+        entries = search_by(cur, field, query, partial=args.partial, regexp=args.regexp)
         for line in fetch_and_format_entries(cur, entries):
             print(line)
