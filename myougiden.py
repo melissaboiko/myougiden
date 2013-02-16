@@ -76,7 +76,15 @@ def create_table(cur):
       CREATE INDEX senses_ent_seq ON senses (ent_seq);
     ''')
 
-
+    cur.execute('''
+      CREATE INDEX kanjis_kanji ON kanjis (kanji);
+    ''')
+    cur.execute('''
+      CREATE INDEX readings_reading ON readings (reading);
+    ''')
+    cur.execute('''
+      CREATE INDEX senses_sense ON senses (sense);
+    ''')
 
 def insert_entry(cur, ent_seq, kanjis, readings, senses):
     cur.execute('INSERT INTO entries(ent_seq) VALUES (?);', [ent_seq])
@@ -183,6 +191,12 @@ if __name__ == '__main__':
     ap.add_argument('-k', '--by-kanji', metavar='QUERY',
                     help="Search entry with kanji field matching query")
 
+    ap.add_argument('-r', '--by-reading', metavar='QUERY',
+                    help="Search entry with reading field (in kana) matching query")
+
+    ap.add_argument('-s', '--by-sense', metavar='QUERY',
+                    help="Search entry with sense field (English translation) matching query")
+
     ap.add_argument('-p', '--partial', action='store_true',
                     help="Search partial matches")
 
@@ -210,9 +224,20 @@ if __name__ == '__main__':
     # elif args.db_uncompress:
     #     subprocess.call(['gzip', '-d', paths['database']])
 
-    con, cur = opendb()
 
+    query=None
     if args.by_kanji:
-        entries = search_by(cur, 'kanji', args.by_kanji, partial=args.partial)
+        field = 'kanji'
+        query = args.by_kanji
+    elif args.by_reading:
+        field = 'reading'
+        query = args.by_reading
+    elif args.by_sense:
+        field = 'sense'
+        query = args.by_sense
+
+    if query:
+        con, cur = opendb()
+        entries = search_by(cur, field, query, partial=args.partial)
         for line in fetch_and_format_entries(cur, entries):
             print(line)
