@@ -129,40 +129,25 @@ def format_entry(kanjis, readings, senses):
         )
 
 def fetch_and_format_entries(cur, entries):
-
-    cur.execute('''
-SELECT kanjis.ent_seq, kanji, reading, sense
-FROM kanjis
-  INNER JOIN readings ON kanjis.ent_seq = readings.ent_seq
-  INNER JOIN senses ON readings.ent_seq = senses.ent_seq
-WHERE kanjis.ent_seq IN (%s)
-;''' % ','.join([str(entry) for entry in entries]))
-
     lines = []
+    for entry in entries:
+        kanjis = []
+        readings = []
+        senses = []
 
-    current_entry = None
-    kanjis = []
-    readings = []
-    senses = []
+        cur.execute('SELECT kanji FROM kanjis WHERE ent_seq = ?;', [entry])
+        for row in cur.fetchall():
+            kanjis.append(row[0])
 
-    for row in cur.fetchall():
-        if row[0] != current_entry:
-            if current_entry:
-                lines.append(format_entry(kanjis, readings, senses))
-                kanjis = []
-                readings = []
-                senses = []
-            current_entry = row[0]
+        cur.execute('SELECT reading FROM readings WHERE ent_seq = ?;', [entry])
+        for row in cur.fetchall():
+            readings.append(row[0])
 
-        if row[1] not in kanjis:
-            kanjis.append(row[1])
-        if row[2] not in readings:
-            readings.append(row[2])
-        if row[3] not in senses:
-            senses.append(row[3])
+        cur.execute('SELECT sense FROM senses WHERE ent_seq = ?;', [entry])
+        for row in cur.fetchall():
+            senses.append(row[0])
 
-
-    lines.append(format_entry(kanjis, readings, senses))
+        lines.append(format_entry(kanjis, readings, senses))
     return lines
 
 def search_by(cur, field, query, partial=False):
