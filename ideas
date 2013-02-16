@@ -1,0 +1,32 @@
+ - Formato dos dados:
+   - campos do jmdict:
+     - kanji*
+     - reading+
+     - sense+
+     - info (quais?)
+     - ...
+     
+   - pitch accent (from where?)
+
+ - Interfaces:
+   - command-line, com bastante cor
+   - GUI: command-line, mas com fontes melhores/just work
+   - web?
+ 
+ - queries:
+   - por: kanji, reading, sense
+   - parcial ou whole
+   - simples ou regexp
+   - case-sensitive ou não
+   - guessy:
+     - tenta whole, se nao, parcial:
+       - tenta simples, se nao, regexp:
+         - se input em latin: tenta sense; se nao, converte pra romazi, tenta reading
+         - senao: tenta kanji, reading
+   - input em romazi (inteligente)
+   - output em romazi (hepburn/kunrei)
+ 
+ - desejáveis:
+   - rápido
+   - pouco espaço em disco
+   - history
