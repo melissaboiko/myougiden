@@ -66,6 +66,16 @@ def create_table(cur):
       );
     ''')
 
+    cur.execute('''
+      CREATE INDEX kanjis_ent_seq ON kanjis (ent_seq);
+    ''')
+    cur.execute('''
+      CREATE INDEX readings_ent_seq ON readings (ent_seq);
+    ''')
+    cur.execute('''
+      CREATE INDEX senses_ent_seq ON senses (ent_seq);
+    ''')
+
 
 
 def insert_entry(cur, ent_seq, kanjis, readings, senses):
