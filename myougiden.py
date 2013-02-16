@@ -110,15 +110,17 @@ def make_database(jmdict, sqlite):
     cur.commit()
 
 def format_entry(kanjis, readings, senses):
+
     return '%s\t%s\t%s' % (
         '；'.join(kanjis),
         '；'.join(readings),
         ';'.join(senses)
         )
 
-def fetch_and_format_many(cur, entries):
+def fetch_and_format_entries(cur, entries):
+
     cur.execute('''
-SELECT kanji, reading, sense
+SELECT kanjis.ent_seq, kanji, reading, sense
 FROM kanjis
   INNER JOIN readings ON kanjis.ent_seq = readings.ent_seq
   INNER JOIN senses ON readings.ent_seq = senses.ent_seq
@@ -126,9 +128,31 @@ WHERE kanjis.ent_seq IN (%s)
 ;''' % ','.join([str(entry) for entry in entries]))
 
     lines = []
-    for row in cur.fetchall():
-        print( row)
 
+    current_entry = None
+    kanjis = []
+    readings = []
+    senses = []
+
+    for row in cur.fetchall():
+        if row[0] != current_entry:
+            if current_entry:
+                lines.append(format_entry(kanjis, readings, senses))
+                kanjis = []
+                readings = []
+                senses = []
+            current_entry = row[0]
+
+        if row[1] not in kanjis:
+            kanjis.append(row[1])
+        if row[2] not in readings:
+            readings.append(row[2])
+        if row[3] not in senses:
+            senses.append(row[3])
+
+
+    lines.append(format_entry(kanjis, readings, senses))
+    return lines
 
 def search_by(cur, field, query, partial=False):
     if field == 'kanji':
@@ -194,4 +218,5 @@ if __name__ == '__main__':
 
     if args.by_kanji:
         entries = search_by(cur, 'kanji', args.by_kanji, partial=args.partial)
-        fetch_and_format_many(cur, entries)
+        for line in fetch_and_format_entries(cur, entries):
+            print(line)
