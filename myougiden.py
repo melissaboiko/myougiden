@@ -107,7 +107,8 @@ def make_database(jmdict, sqlite):
 
         insert_entry(cur, ent_seq, kanjis, readings, senses)
 
-    cur.commit()
+    cur.close()
+    con.commit()
 
 def format_entry(kanjis, readings, senses):
 
