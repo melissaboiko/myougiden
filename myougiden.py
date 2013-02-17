@@ -217,13 +217,13 @@ if __name__ == '__main__':
 
     ap = argparse.ArgumentParser()
 
-    ap.add_argument('-k', '--by-kanji', metavar='QUERY',
+    ap.add_argument('-k', '--by-kanji', action='store_const', dest='field', const='kanji', default='guess',
                     help="Search entry with kanji field matching query")
 
-    ap.add_argument('-r', '--by-reading', metavar='QUERY',
+    ap.add_argument('-r', '--by-reading', action='store_const', dest='field', const='reading',
                     help="Search entry with reading field (in kana) matching query")
 
-    ap.add_argument('-s', '--by-sense', metavar='QUERY',
+    ap.add_argument('-s', '--by-sense', action='store_const', dest='field', const='sense',
                     help="Search entry with sense field (English translation) matching query")
 
 
@@ -236,6 +236,7 @@ if __name__ == '__main__':
     ap.add_argument('-x', '--regexp', action='store_true',
                     help="Regular expression search")
 
+    ap.add_argument('query')
 
     ap.add_argument('--db-update', nargs='?', const='./JMdict_e.gz', default=None, metavar='./JMdict_e.gz',
                     help="Update myougiden database with new JMdict_e.gz file.  Optional argument is path to JMdict.")
@@ -262,19 +263,28 @@ if __name__ == '__main__':
     #     subprocess.call(['gzip', '-d', paths['database']])
 
 
-    query=None
-    if args.by_kanji:
-        field = 'kanji'
-        query = args.by_kanji
-    elif args.by_reading:
-        field = 'reading'
-        query = args.by_reading
-    elif args.by_sense:
-        field = 'sense'
-        query = args.by_sense
+    con, cur = opendb()
 
-    if query:
-        con, cur = opendb()
-        entries = search_by(cur, field, query, partial=args.partial, word=args.word, regexp=args.regexp)
-        for line in fetch_and_format_entries(cur, entries):
-            print(line)
+    if args.field != 'guess':
+        entries = search_by(cur, args.field, args.query,
+                            partial=args.partial,
+                            word=args.word,
+                            regexp=args.regexp)
+    else:
+        entries = search_by(cur, 'kanji', args.query,
+                            partial=args.partial,
+                            word=args.word,
+                            regexp=args.regexp)
+        if len(entries) == 0:
+            entries = search_by(cur, 'reading', args.query,
+                                partial=args.partial,
+                                word=args.word,
+                                regexp=args.regexp)
+            if len(entries) == 0:
+                entries = search_by(cur, 'sense', args.query,
+                                    partial=args.partial,
+                                    word=args.word,
+                                    regexp=args.regexp)
+
+    for line in fetch_and_format_entries(cur, entries):
+        print(line)
