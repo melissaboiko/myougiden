@@ -43,7 +43,7 @@ def opendb():
     cur = con.cursor()
     return con, cur
 
-def format_entry(kanjis, readings, senses):
+def format_entry_tsv(kanjis, readings, senses):
 
     return '%s\t%s\t%s' % (
         '；'.join(kanjis),
@@ -51,27 +51,25 @@ def format_entry(kanjis, readings, senses):
         ';'.join(senses)
         )
 
-def fetch_and_format_entries(cur, entries):
-    lines = []
-    for entry in entries:
-        kanjis = []
-        readings = []
-        senses = []
+def fetch_entry(cur, ent_seq):
+    kanjis = []
+    readings = []
+    senses = []
 
-        cur.execute('SELECT kanji FROM kanjis WHERE ent_seq = ?;', [entry])
-        for row in cur.fetchall():
-            kanjis.append(row[0])
+    cur.execute('SELECT kanji FROM kanjis WHERE ent_seq = ?;', [ent_seq])
+    for row in cur.fetchall():
+        kanjis.append(row[0])
 
-        cur.execute('SELECT reading FROM readings WHERE ent_seq = ?;', [entry])
-        for row in cur.fetchall():
-            readings.append(row[0])
+    cur.execute('SELECT reading FROM readings WHERE ent_seq = ?;', [ent_seq])
+    for row in cur.fetchall():
+        readings.append(row[0])
 
-        cur.execute('SELECT sense FROM senses WHERE ent_seq = ?;', [entry])
-        for row in cur.fetchall():
-            senses.append(row[0])
+    cur.execute('SELECT sense FROM senses WHERE ent_seq = ?;', [ent_seq])
+    for row in cur.fetchall():
+        senses.append(row[0])
 
-        lines.append(format_entry(kanjis, readings, senses))
-    return lines
+    return (kanjis, readings, senses)
+
 
 def search_by(cur, field, query, partial=False, word=False, regexp=False):
     if field == 'kanji':
@@ -183,5 +181,5 @@ if __name__ == '__main__':
                                     word=args.word,
                                     regexp=args.regexp)
 
-    for line in fetch_and_format_entries(cur, entries):
-        print(line)
+    for row in [fetch_entry(cur, ent_seq) for ent_seq in entries]:
+        print(format_entry_tsv(*row))
