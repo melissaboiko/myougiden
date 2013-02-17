@@ -5,6 +5,7 @@ import os
 import sys
 import re
 import gzip
+from pprint import pprint
 import sqlite3 as sql
 # import subprocess
 
@@ -117,7 +118,7 @@ def fetch_entry(cur, ent_seq):
     return (kanjis, readings, senses)
 
 
-def search_by(cur, field, query, partial=False, word=False, regexp=False, case_sensitive=False):
+def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=False):
     '''Main search function.  Return list of ent_seqs.
 
     Field in ('kanji', 'reading', 'sense').
@@ -133,15 +134,25 @@ def search_by(cur, field, query, partial=False, word=False, regexp=False, case_s
 
     if regexp:
         operator = 'REGEXP ?'
-        if word:
-            query = r'\b' + query + r'\b'
-        elif not partial:
+
+        if extent == 'whole':
             query = '^' + query + '$'
+        elif extent == 'word':
+            query = r'\b' + query + r'\b'
 
     else:
-        if word:
+        if extent == 'word':
+            # we custom-implemented match() to whole-word search.
+            #
+            # it uses regexps internally though (but the user query is
+            # escaped).
             operator = 'MATCH ?'
+
         else:
+            # LIKE gives us case-insensitiveness implemented in the
+            # database, so we usen it even for whole-field matching.
+            #
+            # "\" seems to be the least common character in EDICT.
             operator = r"LIKE ? escape '\'"
 
             # my editor doesn't like raw strings
@@ -151,9 +162,8 @@ def search_by(cur, field, query, partial=False, word=False, regexp=False, case_s
             query = query.replace('%', r'\%')
             query = query.replace('_', r'\_')
 
-
-        if partial:
-            query = '%' + query + '%'
+            if extent == 'partial':
+                query = '%' + query + '%'
 
     cur.execute('''
 SELECT ent_seq
@@ -186,6 +196,8 @@ def guess_search(cur, conditions):
         if len(res) > 0:
             return res
 
+def has_alpha(string):
+    return re.search('[a-z]', string, re.I) is not None
 
 if __name__ == '__main__':
     import argparse
@@ -195,7 +207,7 @@ if __name__ == '__main__':
     ag = ap.add_argument_group('Type of query',
                                '''What to look for.  If not provided, the program will attempt to guess
 the query type.''')
-    ag.add_argument('-k', '--by-kanji', action='store_const', dest='field', const='kanji', default='guess',
+    ag.add_argument('-k', '--by-kanji', action='store_const', dest='field', const='kanji', default='auto',
                     help='''Return entries matching query on kanji.''')
 
     ag.add_argument('-r', '--by-reading', action='store_const', dest='field', const='reading',
@@ -212,75 +224,124 @@ translation).''')
 lowercase). Default: Insensitive, unless there's an
 uppercase letter in query.''')
 
-    ag.add_argument('-p', '--partial', action='store_true',
-                    help="Search partial matches.")
-
-    ag.add_argument('-w', '--word', action='store_true',
-                    help='''Search partial matches, but only if query matches a
-whole word (FIXME: currently requires -x).''')
-
     ag.add_argument('-x', '--regexp', action='store_true',
                     help="Regular expression search.")
 
+    ag.add_argument('-e', '--extent', default='auto',
+                    choices=('whole', 'word', 'partial', 'auto'),
+                    help='''How much of the field should the query match:
+ - whole: Query must match the entire field.
+ - word: Query must match whole word (at present
+   only works for English; treated as 'whole' for
+   kanji or reading fields.)
+ - partial: Query may match anything.
+ - auto (default): Try all three, and return
+   first that matches something.''')
+
+    ag.add_argument('-w', '--whole', action='store_const', const='whole', dest='extent',
+                    help='''Equivalent to --extent=whole.''')
+
+    ag.add_argument('--word', action='store_const', const='word', dest='extent',
+                    help='''Equivalent to --extent=word.''')
+
+    ag.add_argument('-p', '--partial', action='store_const', const='partial', dest='extent',
+                    help='Equivalent to --extent=partial.')
+
+
+
     ag = ap.add_argument_group('Output control')
     ag.add_argument('--output-mode', default='auto', choices=('human', 'tab', 'auto'),
-                    help="""Output mode; one of:
- - 'human': Multiline human-readable output.
- - 'tab': One-line tab-separated.
- - 'auto' (default): Human if output is to terminal,
-    tab if writing to pipe or file.""")
+                    help='''Output mode; one of:
+ - human: Multiline human-readable output.
+ - tab: One-line tab-separated.
+ - auto (default): Human if output is to terminal,
+    tab if writing to pipe or file.''')
 
     ag.add_argument('-t', '--tsv', '--tab', action='store_const', const='tab', dest='output_mode',
                     help="Equivalent to --output=mode=tab")
 
-    ap.add_argument('query', help='Text to look for.')
+    ap.add_argument('query', help='Text to look for.', metavar='QUERY')
 
-    # ap.add_argument('--db-compress',
-    #                 action='store_true',
-    #                 help='Compress myougiden database.  Uses less disk space, but queries are slower.')
-    # ap.add_argument('--db-uncompress',
-    #                 action='store_true',
-    #                 help='Uncompress myougiden database.  Uses more disk space, but queries are faster.')
 
     args = ap.parse_args()
 
 
-    # if args.db_compress:
-    #     subprocess.call(['gzip', PATHS['database']])
-    # elif args.db_uncompress:
-    #     subprocess.call(['gzip', '-d', PATHS['database']])
-
+    # first, handle various guesswork
     if args.output_mode == 'auto':
         if sys.stdout.isatty():
             args.output_mode = 'human'
         else:
             args.output_mode = 'tab'
 
+
     if not args.case_sensitive:
         if  re.search("[A-Z]", args.query):
             args.case_sensitive = True
 
-    con, cur = opendb(case_sensitive=args.case_sensitive)
 
+    # 'word' doesn't work for Jap. anyway, and 'whole' is much faster.
+    if args.extent == 'word' and args.field in ('kanji', 'reading'):
+        args.extent = 'whole'
+
+
+    # now handle search guesses.
+
+    # first, we need a dictionary of options with only keys understood
+    # by search_by().
     search_args = vars(args).copy() # turn Namespace to dict
-    # and delete all command-line options which aren't search_by()
-    # options
-
     del search_args['output_mode']
 
-    if args.field != 'guess':
-        entries = search_by(cur, **search_args)
+    # we'll iterate over all required 'field' and 'extent' conditions.
+    #
+    # for code clarity, we always use a list of search conditions,
+    # even if the size of the list is 1.
+
+    if args.field != 'auto':
+        fields = (args.field,)
     else:
-        conditions = []
+        if has_alpha(args.query):
+            # alphabet probably means English; smarter order to
+            # search.
+            fields = ('sense', 'kanji', 'reading')
+        else:
+            # TODO: if string is kana-only, search reading first.
+            fields = ('kanji', 'reading', 'sense')
 
-        search_args['field'] = 'kanji'
-        conditions.append(search_args.copy())
-        search_args['field'] = 'reading'
-        conditions.append(search_args.copy())
-        search_args['field'] = 'sense'
-        conditions.append(search_args.copy())
+    if args.extent != 'auto':
+        extents = (args.extent,)
+    else:
+        extents = ('whole', 'word', 'partial')
 
-        entries = guess_search(cur, conditions)
+
+    conditions = []
+    for extent in extents:
+        for field in fields:
+
+            # the useless combination; we'll avoid it to avoid wasting
+            # time.
+            if extent == 'word' and field != 'sense':
+
+                if args.extent == 'auto':
+                    # we're trying all possibilities, so we can just
+                    # skip this one.  other extents were/will be tried
+                    # elsewhen in the loop.
+                    continue
+                else:
+                    # not trying all possibilities; this is our only
+                    # pass in this field, so let's adjust it.
+                    sa = search_args.copy()
+                    sa['extent'] = 'whole'
+            else:
+                # simple case.
+                sa = search_args.copy()
+                sa['extent'] = extent
+
+            sa['field'] = field
+
+            conditions.append(sa)
+
+    con, cur = opendb(case_sensitive=args.case_sensitive)
+    entries = guess_search(cur, conditions)
 
     if args.output_mode == 'human':
         rows = [fetch_entry(cur, ent_seq) for ent_seq in entries]

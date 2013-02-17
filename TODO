@@ -4,6 +4,7 @@
      - and support in guess
    - inflection!
      - and guess
+   - whole-word for Japanese (feasible?)
 
  - data:
    - part-of-speech
@@ -35,5 +36,6 @@
   - some kind of "full-text search" thing?
 
  - bugs:
-   - tab-display mix senses and glosses
-   - whole-word is slower than regexp! did I do something wrong?
+   - tab-display mix senses and glosses.
+   - whole-field for entire sense is useless. matching by glosses
+     would be better.
