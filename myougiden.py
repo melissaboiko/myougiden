@@ -76,7 +76,7 @@ def format_entry_tsv(kanjis, readings, senses):
     return '%s\t%s\t%s' % (
         '；'.join(kanjis),
         '；'.join(readings),
-        ';'.join(senses)
+        "\t".join(['; '.join(glosses_list) for glosses_list in senses])
         )
 
 def format_entry_human(kanjis, readings, senses):
@@ -90,8 +90,8 @@ def format_entry_human(kanjis, readings, senses):
 
     # perhaps use a gloss table after all...
     i=1
-    for sense in senses:
-        s += "\n  %d. %s" % (i, sense)
+    for glosses_list in senses:
+        s += "\n  %d. %s" % (i, '; '.join(glosses_list))
         i += 1
 
     return s
@@ -101,7 +101,7 @@ def fetch_entry(cur, ent_seq):
 
     kanjis = []
     readings = []
-    senses = []
+    senses = [] # list of list of glosses
 
     cur.execute('SELECT kanji FROM kanjis WHERE ent_seq = ?;', [ent_seq])
     for row in cur.fetchall():
@@ -111,9 +111,18 @@ def fetch_entry(cur, ent_seq):
     for row in cur.fetchall():
         readings.append(row[0])
 
-    cur.execute('SELECT sense FROM senses WHERE ent_seq = ?;', [ent_seq])
+    sense_ids = []
+    cur.execute('SELECT id FROM senses WHERE ent_seq = ?;', [ent_seq])
     for row in cur.fetchall():
-        senses.append(row[0])
+        sense_ids.append(row[0])
+    for sense_id in sense_ids:
+        glosses = []
+
+        cur.execute('SELECT gloss FROM glosses WHERE sense_id = ?;', [sense_id])
+        for row in cur.fetchall():
+            glosses.append(row[0])
+
+        senses.append(glosses)
 
     return (kanjis, readings, senses)
 
@@ -121,16 +130,8 @@ def fetch_entry(cur, ent_seq):
 def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=False):
     '''Main search function.  Return list of ent_seqs.
 
-    Field in ('kanji', 'reading', 'sense').
+    Field in ('kanji', 'reading', 'gloss').
     '''
-
-
-    if field == 'kanji':
-        table = 'kanjis'
-    elif field == 'reading':
-        table = 'readings'
-    elif field == 'sense':
-        table = 'senses'
 
     if regexp:
         operator = 'REGEXP ?'
@@ -153,7 +154,7 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
             # database, so we usen it even for whole-field matching.
             #
             # "\" seems to be the least common character in EDICT.
-            operator = r"LIKE ? escape '\'"
+            operator = r"LIKE ? ESCAPE '\'"
 
             # my editor doesn't like raw strings
             # query = query.replace(r'\', r'\\')
@@ -165,13 +166,27 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
             if extent == 'partial':
                 query = '%' + query + '%'
 
+    if field == 'kanji':
+        table = 'kanjis'
+        join = 'NATURAL JOIN kanjis'
+    elif field == 'reading':
+        table = 'readings'
+        join = 'NATURAL JOIN readings'
+    elif field == 'gloss':
+        table = 'glosses'
+        join = 'NATURAL JOIN senses JOIN glosses ON senses.id = glosses.sense_id'
+
+    # print('SELECT ent_seq FROM entries %s WHERE %s.%s %s;'
+    #       % (join, table, field, operator),
+    #       query)
+
     cur.execute('''
 SELECT ent_seq
 FROM entries
-  NATURAL INNER JOIN %s
+  %s
 WHERE %s.%s %s
 ;'''
-                % (table, table, field, operator),
+                % (join, table, field, operator),
                 [query])
 
     res = []
@@ -179,8 +194,9 @@ WHERE %s.%s %s
         res.append(row[0])
     return res
 
+
 def guess_search(cur, conditions):
-    '''Try many searches.
+    '''Try many searches, return first successful.
 
     conditions -- list of dictionaries.
 
@@ -196,8 +212,10 @@ def guess_search(cur, conditions):
         if len(res) > 0:
             return res
 
+
 def has_alpha(string):
     return re.search('[a-z]', string, re.I) is not None
+
 
 if __name__ == '__main__':
     import argparse
@@ -213,9 +231,9 @@ the query type.''')
     ag.add_argument('-r', '--by-reading', action='store_const', dest='field', const='reading',
                     help='''Return entries matching query on reading (in kana).''')
 
-    ag.add_argument('-s', '--by-sense', action='store_const', dest='field', const='sense',
-                    help='''Return entries matching query on sense (English
-translation).''')
+    ag.add_argument('-g', '--by-gloss', action='store_const', dest='field', const='gloss',
+                    help='''Return entries matching query on glosses (English
+translations/meaning).''')
 
 
     ag = ap.add_argument_group('Query options')
@@ -302,10 +320,10 @@ uppercase letter in query.''')
         if has_alpha(args.query):
             # alphabet probably means English; smarter order to
             # search.
-            fields = ('sense', 'kanji', 'reading')
+            fields = ('gloss', 'kanji', 'reading')
         else:
             # TODO: if string is kana-only, search reading first.
-            fields = ('kanji', 'reading', 'sense')
+            fields = ('kanji', 'reading', 'gloss')
 
     if args.extent != 'auto':
         extents = (args.extent,)
@@ -319,7 +337,7 @@ uppercase letter in query.''')
 
             # the useless combination; we'll avoid it to avoid wasting
             # time.
-            if extent == 'word' and field != 'sense':
+            if extent == 'word' and field != 'gloss':
 
                 if args.extent == 'auto':
                     # we're trying all possibilities, so we can just
@@ -340,6 +358,7 @@ uppercase letter in query.''')
 
             conditions.append(sa)
 
+    # pprint(conditions)
     con, cur = opendb(case_sensitive=args.case_sensitive)
     entries = guess_search(cur, conditions)
 

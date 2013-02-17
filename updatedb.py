@@ -13,17 +13,18 @@ def create_table(cur):
     cur.execute('DROP TABLE IF EXISTS kanjis;')
     cur.execute('DROP TABLE IF EXISTS readings;')
     cur.execute('DROP TABLE IF EXISTS senses;')
+    cur.execute('DROP TABLE IF EXISTS glosses;')
     cur.execute('DROP TABLE IF EXISTS entries;')
 
     cur.execute('''
-      CREATE TABLE 
+      CREATE TABLE
       entries (
         ent_seq INTEGER PRIMARY KEY
       );
     ''')
 
     cur.execute('''
-      CREATE TABLE 
+      CREATE TABLE
       kanjis (
         ent_seq INTEGER NOT NULL,
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,7 +34,7 @@ def create_table(cur):
     ''')
 
     cur.execute('''
-      CREATE TABLE 
+      CREATE TABLE
       readings (
         ent_seq INTEGER NOT NULL,
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,12 +44,21 @@ def create_table(cur):
     ''')
 
     cur.execute('''
-      CREATE TABLE 
+      CREATE TABLE
       senses (
         ent_seq INTEGER NOT NULL,
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sense TEXT NOT NULL,
         FOREIGN KEY (ent_seq) REFERENCES entries(ent_seq)
+      );
+    ''')
+
+    cur.execute('''
+      CREATE TABLE
+      glosses (
+        sense_id INTEGER NOT NULL,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        gloss TEXT NOT NULL,
+        FOREIGN KEY (sense_id) REFERENCES senses(id)
       );
     ''')
 
@@ -61,6 +71,9 @@ def create_table(cur):
     cur.execute('''
       CREATE INDEX senses_ent_seq ON senses (ent_seq);
     ''')
+    cur.execute('''
+      CREATE INDEX glosses_sense_id ON glosses (sense_id);
+    ''')
 
     cur.execute('''
       CREATE INDEX kanjis_kanji ON kanjis (kanji);
@@ -69,10 +82,14 @@ def create_table(cur):
       CREATE INDEX readings_reading ON readings (reading);
     ''')
     cur.execute('''
-      CREATE INDEX senses_sense ON senses (sense);
+      CREATE INDEX glosses_gloss ON glosses (gloss);
     ''')
 
 
+# cur, int,
+# [kanjistr, kanjistr...],
+# [readingstr, readingstr...],
+# [[gloss1a, gloss1b...], [gloss2a, gloss2b...]]
 def insert_entry(cur, ent_seq, kanjis, readings, senses):
     cur.execute('INSERT INTO entries(ent_seq) VALUES (?);', [ent_seq])
     for kanji in kanjis:
@@ -82,7 +99,14 @@ def insert_entry(cur, ent_seq, kanjis, readings, senses):
         cur.execute('INSERT INTO readings(ent_seq, reading) VALUES (?, ?);', [ent_seq, reading])
 
     for sense in senses:
-        cur.execute('INSERT INTO senses(ent_seq, sense) VALUES (?, ?);', [ent_seq, sense])
+        cur.execute('INSERT INTO senses(ent_seq) VALUES (?);', [ent_seq])
+        cur.execute('SELECT max(id) FROM senses;')
+        sense_id = cur.fetchone()[0]
+
+        for gloss in sense:
+            cur.execute('INSERT INTO glosses(sense_id, gloss) VALUES (?, ?);',
+                        [sense_id, gloss])
+
 
 def make_database(jmdict, sqlite):
     con, cur = opendb()
@@ -104,11 +128,10 @@ def make_database(jmdict, sqlite):
         senses = []
         for sense in entry.findall('sense'):
 
-            # for now I foresee no need for a separate glosses table
             glosses = []
             for gloss in sense.findall('gloss'):
                 glosses.append(gloss.text)
-            senses.append('; '.join(glosses))
+            senses.append(glosses)
 
         insert_entry(cur, ent_seq, kanjis, readings, senses)
 
