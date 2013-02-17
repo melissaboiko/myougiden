@@ -71,7 +71,7 @@ def fetch_entry(cur, ent_seq):
     return (kanjis, readings, senses)
 
 
-def search_by(cur, field, query, partial=False, word=False, regexp=False):
+def search_by(cur, field, query, partial=False, word=False, regexp=False, case_sensitive=False):
     if field == 'kanji':
         table = 'kanjis'
     elif field == 'reading':
@@ -108,6 +108,24 @@ WHERE %s.%s %s ?
     for row in cur.fetchall():
         res.append(row[0])
     return res
+
+def guess_search(cur, conditions):
+    '''Try many searches.
+
+    conditions -- list of dictionaries.
+
+    Each dictionary in *conditions is a set of keyword arguments for
+    search_by() (including the mandatory arguments!).
+
+    guess_search will try all in order, and return the first one with
+    >0 results.
+    '''
+
+    for condition in conditions:
+        res = search_by(cur, **condition)
+        if len(res) > 0:
+            return res
+
 
 if __name__ == '__main__':
     import argparse
@@ -161,25 +179,20 @@ if __name__ == '__main__':
         cur.execute('PRAGMA case_sensitive_like = 1;')
 
     if args.field != 'guess':
-        entries = search_by(cur, args.field, args.query,
-                            partial=args.partial,
-                            word=args.word,
-                            regexp=args.regexp)
+        entries = search_by(cur, **vars(args))
     else:
-        entries = search_by(cur, 'kanji', args.query,
-                            partial=args.partial,
-                            word=args.word,
-                            regexp=args.regexp)
-        if len(entries) == 0:
-            entries = search_by(cur, 'reading', args.query,
-                                partial=args.partial,
-                                word=args.word,
-                                regexp=args.regexp)
-            if len(entries) == 0:
-                entries = search_by(cur, 'sense', args.query,
-                                    partial=args.partial,
-                                    word=args.word,
-                                    regexp=args.regexp)
+        args = vars(args)
+
+        conditions = []
+
+        args['field'] = 'kanji'
+        conditions.append(args.copy())
+        args['field'] = 'reading'
+        conditions.append(args.copy())
+        args['field'] = 'sense'
+        conditions.append(args.copy())
+
+        entries = guess_search(cur, conditions)
 
     for row in [fetch_entry(cur, ent_seq) for ent_seq in entries]:
         print(format_entry_tsv(*row))
