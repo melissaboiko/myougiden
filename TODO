@@ -1,0 +1,21 @@
+ - query types:
+   - guess in order: whole-field, whole-word, partial
+   - whole-word search for non-regexp
+   - better control of case sensitivity
+   - romaji input
+     - and support in guess
+
+ - data:
+   - part-of-speech
+   - other edict fields
+   - pitch-accent data (from where?)
+
+ - resources:
+   - option to auto-compress/decompress database
+
+ - output:
+   - color
+   - romaji output
+     - hep and kun
+   - "human" output with better alignment
+
