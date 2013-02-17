@@ -22,7 +22,7 @@ def get_regex(pattern, flags):
     if pattern in regexp_store.keys():
         return regexp_store[pattern]
     else:
-        comp = re.compile(pattern, re.L | re.U | flags)
+        comp = re.compile(pattern, re.U | flags)
 
         regexp_store[pattern] = comp
         return comp
