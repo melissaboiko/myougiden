@@ -3,6 +3,8 @@
    - whole-word search for non-regexp
    - romaji input
      - and support in guess
+   - inflection!
+     - and guess
 
  - data:
    - part-of-speech
@@ -16,7 +18,7 @@
    - color
    - romaji output
      - hep and kun
-   - "human" output with better alignment
+   - better wrapping for "human" output
 
  - better documentation
    - group options by theme

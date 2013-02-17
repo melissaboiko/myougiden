@@ -66,6 +66,23 @@ def format_entry_tsv(kanjis, readings, senses):
         ';'.join(senses)
         )
 
+def format_entry_human(kanjis, readings, senses):
+    s = ''
+
+    s += '；'.join(readings)
+
+    if len(kanjis) > 0:
+        s += "\n"
+        s += '；'.join(kanjis)
+
+    # perhaps use a gloss table after all...
+    i=1
+    for sense in senses:
+        s += "\n  %d. %s" % (i, sense)
+        i += 1
+
+    return s
+
 def fetch_entry(cur, ent_seq):
     '''Return tuple of lists (kanjis, readings, senses).'''
 
@@ -153,31 +170,50 @@ def guess_search(cur, conditions):
 if __name__ == '__main__':
     import argparse
 
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 
-    ap.add_argument('-k', '--by-kanji', action='store_const', dest='field', const='kanji', default='guess',
-                    help="Search entry with kanji field matching query")
+    ag = ap.add_argument_group('Type of query',
+                               '''What to look for.  If not provided, the program will attempt to guess
+the query type.''')
+    ag.add_argument('-k', '--by-kanji', action='store_const', dest='field', const='kanji', default='guess',
+                    help='''Return entries matching query on kanji.''')
 
-    ap.add_argument('-r', '--by-reading', action='store_const', dest='field', const='reading',
-                    help="Search entry with reading field (in kana) matching query")
+    ag.add_argument('-r', '--by-reading', action='store_const', dest='field', const='reading',
+                    help='''Return entries matching query on reading (in kana).''')
 
-    ap.add_argument('-s', '--by-sense', action='store_const', dest='field', const='sense',
-                    help="Search entry with sense field (English translation) matching query")
+    ag.add_argument('-s', '--by-sense', action='store_const', dest='field', const='sense',
+                    help='''Return entries matching query on sense (English
+translation).''')
 
 
-    ap.add_argument('--case-sensitive', '--sensitive', action='store_true',
-                    help="Case-sensitive search (distinguish uppercase from lowercase)")
+    ag = ap.add_argument_group('Query options')
+    ag.add_argument('--case-sensitive', '--sensitive', action='store_true',
+                    help='''Case-sensitive search (distinguish uppercase from
+lowercase). Default: Insensitive, unless there's an
+uppercase letter in query.''')
 
-    ap.add_argument('-p', '--partial', action='store_true',
-                    help="Search partial matches")
+    ag.add_argument('-p', '--partial', action='store_true',
+                    help="Search partial matches.")
 
-    ap.add_argument('-w', '--word', action='store_true',
-                    help="Search partial matches, but only if query matches a whole word (FIXME: currently requires -x)")
+    ag.add_argument('-w', '--word', action='store_true',
+                    help='''Search partial matches, but only if query matches a
+whole word (FIXME: currently requires -x).''')
 
-    ap.add_argument('-x', '--regexp', action='store_true',
-                    help="Regular expression search")
+    ag.add_argument('-x', '--regexp', action='store_true',
+                    help="Regular expression search.")
 
-    ap.add_argument('query')
+    ag = ap.add_argument_group('Output control')
+    ag.add_argument('--output-mode', default='auto', choices=('human', 'tab', 'auto'),
+                    help="""Output mode; one of:
+ - 'human': Multiline human-readable output.
+ - 'tab': One-line tab-separated.
+ - 'auto' (default): Human if output is to terminal,
+    tab if writing to pipe or file.""")
+
+    ag.add_argument('-t', '--tsv', '--tab', action='store_const', const='tab', dest='output_mode',
+                    help="Equivalent to --output=mode=tab")
+
+    ap.add_argument('query', help='Text to look for.')
 
     # ap.add_argument('--db-compress',
     #                 action='store_true',
@@ -194,27 +230,42 @@ if __name__ == '__main__':
     # elif args.db_uncompress:
     #     subprocess.call(['gzip', '-d', PATHS['database']])
 
+    if args.output_mode == 'auto':
+        if sys.stdout.isatty():
+            args.output_mode = 'human'
+        else:
+            args.output_mode = 'tab'
+
     if not args.case_sensitive:
         if  re.search("[A-Z]", args.query):
             args.case_sensitive = True
 
     con, cur = opendb(case_sensitive=args.case_sensitive)
 
-    if args.field != 'guess':
-        entries = search_by(cur, **vars(args))
-    else:
-        args = vars(args)
+    search_args = vars(args).copy() # turn Namespace to dict
+    # and delete all command-line options which aren't search_by()
+    # options
 
+    del search_args['output_mode']
+
+    if args.field != 'guess':
+        entries = search_by(cur, **search_args)
+    else:
         conditions = []
 
-        args['field'] = 'kanji'
-        conditions.append(args.copy())
-        args['field'] = 'reading'
-        conditions.append(args.copy())
-        args['field'] = 'sense'
-        conditions.append(args.copy())
+        search_args['field'] = 'kanji'
+        conditions.append(search_args.copy())
+        search_args['field'] = 'reading'
+        conditions.append(search_args.copy())
+        search_args['field'] = 'sense'
+        conditions.append(search_args.copy())
 
         entries = guess_search(cur, conditions)
 
-    for row in [fetch_entry(cur, ent_seq) for ent_seq in entries]:
-        print(format_entry_tsv(*row))
+    if args.output_mode == 'human':
+        rows = [fetch_entry(cur, ent_seq) for ent_seq in entries]
+        print("\n\n".join([format_entry_human(*row) for row in rows]))
+
+    elif args.output_mode == 'tab':
+        for row in [fetch_entry(cur, ent_seq) for ent_seq in entries]:
+            print(format_entry_tsv(*row))
