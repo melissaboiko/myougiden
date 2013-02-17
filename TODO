@@ -21,6 +21,8 @@
  - better documentation
    - group options by theme
 
+ - install script
+
  - alternative backends?
   - it would be interesting to have some benchmark scripts to compare
     backends:
