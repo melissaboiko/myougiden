@@ -20,3 +20,13 @@
 
  - better documentation
    - group options by theme
+
+ - alternative backends?
+  - it would be interesting to have some benchmark scripts to compare
+    backends:
+    - latency: average, median, and variance of all queries, very
+      simple queries, and very complex one
+    - disk space needed
+  - EDICT2 with grep
+  - some NoSQL thing?
+  - some kind of "full-text search" thing?
