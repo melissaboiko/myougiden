@@ -22,7 +22,7 @@ def get_regex(pattern, flags):
     if pattern in regexp_store.keys():
         return regexp_store[pattern]
     else:
-        comp = re.compile(pattern, flags)
+        comp = re.compile(pattern, re.L | re.U | flags)
 
         regexp_store[pattern] = comp
         return comp
@@ -30,7 +30,7 @@ def get_regex(pattern, flags):
 
 # sql hook functions
 def regexp_sensitive(pattern, field):
-    reg = get_regex(pattern, None)
+    reg = get_regex(pattern, 0)
     return reg.search(field) is not None
 
 def regexp_insensitive(pattern, field):
@@ -43,10 +43,10 @@ def opendb(case_sensitive=False):
 
     if case_sensitive:
         con.create_function('regexp', 2, regexp_sensitive)
-        cur.execute('PRAGMA case_sensitive_like = 0;')
+        cur.execute('PRAGMA case_sensitive_like = 1;')
     else:
         con.create_function('regexp', 2, regexp_insensitive)
-        cur.execute('PRAGMA case_sensitive_like = 1;')
+        cur.execute('PRAGMA case_sensitive_like = 0;')
 
 
     return con, cur
