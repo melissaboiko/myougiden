@@ -13,19 +13,29 @@ PATHS['sharedir'] = '.'
 PATHS['database'] = os.path.join(PATHS['sharedir'], 'jmdict.sqlite')
 PATHS['jmdict_url'] = 'http://ftp.monash.edu.au/pub/nihongo/JMdict_e.gz'
 
+# stored as global due to sql hook functions
+SENSITIVE=False
+
+# store that persists between many queries
 regexp_store = {}
 def get_regex(pattern):
     if pattern in regexp_store.keys():
         return regexp_store[pattern]
     else:
-        comp = re.compile(pattern, re.I)
+        if SENSITIVE:
+            comp = re.compile(pattern)
+        else:
+            comp = re.compile(pattern, re.I)
+
         regexp_store[pattern] = comp
         return comp
 
+# sql hook function
 def regexp(pattern, field):
     # print(pattern, field)
     reg = get_regex(pattern)
     return reg.search(field) is not None
+
 
 def opendb():
     con = sql.connect(PATHS['database'])
@@ -116,6 +126,9 @@ if __name__ == '__main__':
                     help="Search entry with sense field (English translation) matching query")
 
 
+    ap.add_argument('--case-sensitive', '--sensitive', action='store_true',
+                    help="Case-sensitive search (distinguish uppercase from lowercase)")
+
     ap.add_argument('-p', '--partial', action='store_true',
                     help="Search partial matches")
 
@@ -144,6 +157,10 @@ if __name__ == '__main__':
 
 
     con, cur = opendb()
+
+    if args.case_sensitive or re.search("[A-Z]", args.query):
+        SENSITIVE = True
+        cur.execute('PRAGMA case_sensitive_like = 1;')
 
     if args.field != 'guess':
         entries = search_by(cur, args.field, args.query,

@@ -1,7 +1,6 @@
  - query types:
    - guess in order: whole-field, whole-word, partial
    - whole-word search for non-regexp
-   - better control of case sensitivity
    - romaji input
      - and support in guess
 
