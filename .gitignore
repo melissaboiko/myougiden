@@ -1,2 +1,4 @@
 JMdict*
 jmdict.sqlite
+*journal
+__pycache*
