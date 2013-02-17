@@ -25,6 +25,7 @@ def get_regex(pattern):
         return comp
 
 def regexp(pattern, field):
+    # print(pattern, field)
     reg = get_regex(pattern)
     return reg.search(field) is not None
 
@@ -173,7 +174,7 @@ def fetch_and_format_entries(cur, entries):
         lines.append(format_entry(kanjis, readings, senses))
     return lines
 
-def search_by(cur, field, query, partial=False, regexp=False):
+def search_by(cur, field, query, partial=False, word=False, regexp=False):
     if field == 'kanji':
         table = 'kanjis'
     elif field == 'reading':
@@ -186,10 +187,16 @@ def search_by(cur, field, query, partial=False, regexp=False):
     else:
         operator = 'LIKE'
 
-    if partial and not regexp:
-        query = '%' + query + '%'
-    elif regexp and not partial:
-        query = '^' + query + '$'
+    if regexp:
+        if word:
+            query = '\\b' + query + '\\b'
+        elif not partial:
+            query = '^' + query + '$'
+    else:
+        if word:
+            pass # TODO
+        elif partial:
+            query = '%' + query + '%'
 
     cur.execute('''
 SELECT ent_seq
@@ -222,6 +229,9 @@ if __name__ == '__main__':
 
     ap.add_argument('-p', '--partial', action='store_true',
                     help="Search partial matches")
+
+    ap.add_argument('-w', '--word', action='store_true',
+                    help="Search partial matches, but only if query matches a whole word (FIXME: currently requires -x")
 
     ap.add_argument('-x', '--regexp', action='store_true',
                     help="Regular expression search")
@@ -265,6 +275,6 @@ if __name__ == '__main__':
 
     if query:
         con, cur = opendb()
-        entries = search_by(cur, field, query, partial=args.partial, regexp=args.regexp)
+        entries = search_by(cur, field, query, partial=args.partial, word=args.word, regexp=args.regexp)
         for line in fetch_and_format_entries(cur, entries):
             print(line)
