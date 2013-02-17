@@ -13,34 +13,42 @@ PATHS['sharedir'] = '.'
 PATHS['database'] = os.path.join(PATHS['sharedir'], 'jmdict.sqlite')
 PATHS['jmdict_url'] = 'http://ftp.monash.edu.au/pub/nihongo/JMdict_e.gz'
 
-# stored as global due to sql hook functions
-SENSITIVE=False
-
-# store that persists between many queries
+# store that persists between many queries.
+#
+# flags are not part of the hash (don't try to store the same pattern
+# with different flags).
 regexp_store = {}
-def get_regex(pattern):
+def get_regex(pattern, flags):
     if pattern in regexp_store.keys():
         return regexp_store[pattern]
     else:
-        if SENSITIVE:
-            comp = re.compile(pattern)
-        else:
-            comp = re.compile(pattern, re.I)
+        comp = re.compile(pattern, flags)
 
         regexp_store[pattern] = comp
         return comp
 
-# sql hook function
-def regexp(pattern, field):
-    # print(pattern, field)
-    reg = get_regex(pattern)
+
+# sql hook functions
+def regexp_sensitive(pattern, field):
+    reg = get_regex(pattern, None)
     return reg.search(field) is not None
 
+def regexp_insensitive(pattern, field):
+    reg = get_regex(pattern, re.I)
+    return reg.search(field) is not None
 
-def opendb():
+def opendb(case_sensitive=False):
     con = sql.connect(PATHS['database'])
-    con.create_function('regexp', 2, regexp)
     cur = con.cursor()
+
+    if case_sensitive:
+        con.create_function('regexp', 2, regexp_sensitive)
+        cur.execute('PRAGMA case_sensitive_like = 0;')
+    else:
+        con.create_function('regexp', 2, regexp_insensitive)
+        cur.execute('PRAGMA case_sensitive_like = 1;')
+
+
     return con, cur
 
 def format_entry_tsv(kanjis, readings, senses):
@@ -171,12 +179,11 @@ if __name__ == '__main__':
     # elif args.db_uncompress:
     #     subprocess.call(['gzip', '-d', PATHS['database']])
 
+    if not args.case_sensitive:
+        if  re.search("[A-Z]", args.query):
+            args.case_sensitive = True
 
-    con, cur = opendb()
-
-    if args.case_sensitive or re.search("[A-Z]", args.query):
-        SENSITIVE = True
-        cur.execute('PRAGMA case_sensitive_like = 1;')
+    con, cur = opendb(case_sensitive=args.case_sensitive)
 
     if args.field != 'guess':
         entries = search_by(cur, **vars(args))
