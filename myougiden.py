@@ -13,12 +13,17 @@ PATHS['sharedir'] = '.'
 PATHS['database'] = os.path.join(PATHS['sharedir'], 'jmdict.sqlite')
 PATHS['jmdict_url'] = 'http://ftp.monash.edu.au/pub/nihongo/JMdict_e.gz'
 
-# store that persists between many queries.
-#
-# flags are not part of the hash (don't try to store the same pattern
-# with different flags).
 regexp_store = {}
 def get_regex(pattern, flags):
+    '''Return a compiled regexp from persistent store; make one if needed.
+
+    We use this helper function so that the SQL hooks don't have to
+    compile the same regexp at every query.
+
+    Flags are not part of the hash; i.e. this function doesn't work
+    for the same pattern with different flags.
+    '''
+
     if pattern in regexp_store.keys():
         return regexp_store[pattern]
     else:
@@ -28,16 +33,19 @@ def get_regex(pattern, flags):
         return comp
 
 
-# sql hook functions
 def regexp_sensitive(pattern, field):
+    '''SQL hook function for case-sensitive regexp matching.'''
     reg = get_regex(pattern, 0)
     return reg.search(field) is not None
 
 def regexp_insensitive(pattern, field):
+    '''SQL hook function for case-insensitive regexp matching.'''
     reg = get_regex(pattern, re.I)
     return reg.search(field) is not None
 
 def opendb(case_sensitive=False):
+    '''Open SQL database; returns (con, cur).'''
+
     con = sql.connect(PATHS['database'])
     cur = con.cursor()
 
@@ -52,7 +60,6 @@ def opendb(case_sensitive=False):
     return con, cur
 
 def format_entry_tsv(kanjis, readings, senses):
-
     return '%s\t%s\t%s' % (
         '；'.join(kanjis),
         '；'.join(readings),
@@ -60,6 +67,8 @@ def format_entry_tsv(kanjis, readings, senses):
         )
 
 def fetch_entry(cur, ent_seq):
+    '''Return tuple of lists (kanjis, readings, senses).'''
+
     kanjis = []
     readings = []
     senses = []
@@ -80,6 +89,12 @@ def fetch_entry(cur, ent_seq):
 
 
 def search_by(cur, field, query, partial=False, word=False, regexp=False, case_sensitive=False):
+    '''Main search function.  Return list of ent_seqs.
+
+    Field in ('kanji', 'reading', 'sense').
+    '''
+
+
     if field == 'kanji':
         table = 'kanjis'
     elif field == 'reading':
@@ -94,7 +109,7 @@ def search_by(cur, field, query, partial=False, word=False, regexp=False, case_s
 
     if regexp:
         if word:
-            query = '\\b' + query + '\\b'
+            query = r'\b' + query + r'\b'
         elif not partial:
             query = '^' + query + '$'
     else:
