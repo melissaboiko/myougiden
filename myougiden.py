@@ -28,7 +28,6 @@ def get_regex(pattern, flags):
         return regexp_store[pattern]
     else:
         comp = re.compile(pattern, re.U | flags)
-
         regexp_store[pattern] = comp
         return comp
 
@@ -43,6 +42,17 @@ def regexp_insensitive(pattern, field):
     reg = get_regex(pattern, re.I)
     return reg.search(field) is not None
 
+def match_word_sensitive(word, field):
+    '''SQL hook function for whole-word, case-sensitive, non-regexp matching.'''
+    reg = get_regex(r'\b' + re.escape(word) + r'\b', 0)
+    return reg.search(field) is not None
+
+def match_word_insensitive(word, field):
+    '''SQL hook function for whole-word, case-sensitive, non-regexp matching.'''
+    reg = get_regex(r'\b' + re.escape(word) + r'\b', re.I)
+    return reg.search(field) is not None
+
+
 def opendb(case_sensitive=False):
     '''Open SQL database; returns (con, cur).'''
 
@@ -51,9 +61,11 @@ def opendb(case_sensitive=False):
 
     if case_sensitive:
         con.create_function('regexp', 2, regexp_sensitive)
+        con.create_function('match', 2, match_word_sensitive)
         cur.execute('PRAGMA case_sensitive_like = 1;')
     else:
         con.create_function('regexp', 2, regexp_insensitive)
+        con.create_function('match', 2, match_word_insensitive)
         cur.execute('PRAGMA case_sensitive_like = 0;')
 
 
@@ -120,26 +132,34 @@ def search_by(cur, field, query, partial=False, word=False, regexp=False, case_s
         table = 'senses'
 
     if regexp:
-        operator = 'REGEXP'
-    else:
-        operator = 'LIKE'
-
-    if regexp:
+        operator = 'REGEXP ?'
         if word:
             query = r'\b' + query + r'\b'
         elif not partial:
             query = '^' + query + '$'
+
     else:
         if word:
-            pass # TODO
-        elif partial:
+            operator = 'MATCH ?'
+        else:
+            operator = r"LIKE ? escape '\'"
+
+            # my editor doesn't like raw strings
+            # query = query.replace(r'\', r'\\')
+            query = query.replace('\\', '\\\\')
+
+            query = query.replace('%', r'\%')
+            query = query.replace('_', r'\_')
+
+
+        if partial:
             query = '%' + query + '%'
 
     cur.execute('''
 SELECT ent_seq
 FROM entries
   NATURAL INNER JOIN %s
-WHERE %s.%s %s ?
+WHERE %s.%s %s
 ;'''
                 % (table, table, field, operator),
                 [query])

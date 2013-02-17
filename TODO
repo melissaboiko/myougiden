@@ -1,6 +1,5 @@
  - query types:
    - guess in order: whole-field, whole-word, partial
-   - whole-word search for non-regexp
    - romaji input
      - and support in guess
    - inflection!
@@ -34,3 +33,7 @@
   - EDICT2 with grep
   - some NoSQL thing?
   - some kind of "full-text search" thing?
+
+ - bugs:
+   - tab-display mix senses and glosses
+   - whole-word is slower than regexp! did I do something wrong?
