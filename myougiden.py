@@ -83,7 +83,7 @@ def opendb(case_sensitive=False):
 # style : args
 # *args as for colored()
 FORMATTING={
-        'reading': ('magenta', None, ['bold']),
+        'reading': ('magenta', None, None),
 
         # TODO: use blue for clear bg, cyan for dark bg
         'kanji': ('cyan', None, None),
@@ -92,7 +92,7 @@ FORMATTING={
         # 'gloss':
 
         # careful: green/red is the most common color blindness
-        'highlight': ('green', None, ['bold']),
+        'misc': ('green', None, None),
 
         # non-bold grey doesn't even show in my dark xterm.
         'subdue': ('yellow', None, None),
@@ -126,7 +126,7 @@ def format_entry_human(kanjis, readings, senses, c=True):
     i=1
     for glosses_list in senses:
         s += "\n "
-        s += fmt('%d.' % i, 'highlight', c)
+        s += fmt('%d.' % i, 'misc', c)
         s += ' '
         s += fmt('; ', 'subdue', c).join(glosses_list)
         i += 1
