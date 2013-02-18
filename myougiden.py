@@ -277,7 +277,10 @@ uppercase letter in query.''')
     tab if writing to pipe or file.''')
 
     ag.add_argument('-t', '--tsv', '--tab', action='store_const', const='tab', dest='output_mode',
-                    help="Equivalent to --output=mode=tab")
+                    help="Equivalent to --output-mode=tab")
+
+    ag.add_argument('--human', action='store_const', const='human', dest='output_mode',
+                    help="Equivalent to --output-mode=human")
 
     ap.add_argument('query', help='Text to look for.', metavar='QUERY')
 
