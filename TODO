@@ -1,5 +1,4 @@
  - query types:
-   - guess in order: whole-field, whole-word, partial
    - romaji input
      - and support in guess
    - inflection!
@@ -8,6 +7,7 @@
 
  - data:
    - part-of-speech
+   - 'common' flag
    - other edict fields
    - pitch-accent data (from where?)
 
@@ -21,21 +21,12 @@
    - better wrapping for "human" output
 
  - better documentation
-   - group options by theme
 
  - install script
+   - sane filenames and paths
 
  - alternative backends?
-  - it would be interesting to have some benchmark scripts to compare
-    backends:
-    - latency: average, median, and variance of all queries, very
-      simple queries, and very complex one
-    - disk space needed
-  - EDICT2 with grep
-  - some NoSQL thing?
-  - some kind of "full-text search" thing?
-
- - bugs:
-   - tab-display mix senses and glosses.
-   - whole-field for entire sense is useless. matching by glosses
-     would be better.
+  - better benchmarks to compare them
+  - backend: EDICT2 with grep
+  - backend: some NoSQL thing?
+  - backend: some kind of "full-text search" thing?
