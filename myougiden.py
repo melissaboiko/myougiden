@@ -58,6 +58,8 @@ def match_word_insensitive(word, field):
     reg = get_regex(r'\b' + re.escape(word) + r'\b', re.I)
     return reg.search(field) is not None
 
+def testdb():
+    return os.path.isfile(PATHS['database'])
 
 def opendb(case_sensitive=False):
     '''Open SQL database; returns (con, cur).'''

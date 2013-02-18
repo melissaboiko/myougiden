@@ -171,8 +171,8 @@ if __name__ == '__main__':
     ap.add_argument('-f', '--fetch', action='store_true',
                     help=("Try to fetch JMdict_e.gz from %s" % PATHS['jmdict_url']))
 
-    ap.add_argument('-d', '--delete', action='store_true',
-                    help="Delete JMdict_e.gz file after use.")
+    ap.add_argument('-k', '--keep', action='store_true',
+                    help="Keep downloaded JMdict_e.gz file after use.")
 
     args = ap.parse_args()
 
@@ -185,6 +185,6 @@ if __name__ == '__main__':
     make_database(gzip.open(args.jmdict, 'r'),
                   PATHS['database'])
 
-    if args.delete:
+    if args.fetch and not args.keep:
         print("Deleting %s." % args.jmdict)
         os.remove(args.jmdict)

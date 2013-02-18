@@ -16,6 +16,7 @@
    - romaji output
      - hep and kun
    - better wrapping for "human" output
+   - auto-pager
 
  - better documentation
    - gentle reminder to run updatedb if sqlite not found
