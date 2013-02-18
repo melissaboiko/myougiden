@@ -21,6 +21,7 @@
    - better wrapping for "human" output
 
  - better documentation
+   - gentle reminder to run updatedb if sqlite not found
 
  - install script/distutils
 
