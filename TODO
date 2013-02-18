@@ -8,11 +8,8 @@
  - data:
    - part-of-speech
    - 'common' flag
-   - other edict fields
+   - other edict fields (which?)
    - pitch-accent data (from where?)
-
- - resources:
-   - option to auto-compress/decompress database
 
  - output:
    - color
@@ -23,10 +20,13 @@
  - better documentation
    - gentle reminder to run updatedb if sqlite not found
 
- - install script/distutils
+ - improve install script/distutils
+   - pypi
+   - deb?
 
  - alternative backends?
   - better benchmarks to compare them
+  - option to auto-compress/decompress database
   - backend: EDICT2 with grep
   - backend: some NoSQL thing?
   - backend: some kind of "full-text search" thing?
