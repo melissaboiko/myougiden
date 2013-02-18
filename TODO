@@ -27,8 +27,8 @@
    - gentle reminder to run updatedb if sqlite not found
 
  - improve install script/distutils
-   - pypi
-   - smarter handling of dev/installed environments
+   - smarter handling of dev vs. installed environments
+   - can we make pypi post-uninstall delete database?
    - deb?
 
  - alternative backends?
