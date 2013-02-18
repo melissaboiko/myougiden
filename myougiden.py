@@ -6,8 +6,8 @@ import sqlite3 as sql
 PATHS = {}
 
 PATHS['pkgprefix'] = os.path.realpath(os.path.dirname(__file__))
-PATHS['sharedir'] = os.path.join(PATHS['pkgprefix'], 'var')
-PATHS['database'] = os.path.join(PATHS['sharedir'], 'jmdict.sqlite')
+PATHS['vardir'] = os.path.join(PATHS['pkgprefix'], 'var')
+PATHS['database'] = os.path.join(PATHS['vardir'], 'jmdict.sqlite')
 PATHS['jmdict_url'] = 'http://ftp.monash.edu.au/pub/nihongo/JMdict_e.gz'
 
 regexp_store = {}
