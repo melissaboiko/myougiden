@@ -10,6 +10,15 @@ PATHS['vardir'] = os.path.join(PATHS['pkgprefix'], 'var')
 PATHS['database'] = os.path.join(PATHS['vardir'], 'jmdict.sqlite')
 PATHS['jmdict_url'] = 'http://ftp.monash.edu.au/pub/nihongo/JMdict_e.gz'
 
+# extracted from edict "reading" fields. TODO: cross-check with Unicode
+edict_kana='・？ヽヾゝゞー〜ぁあぃいうぇえおかがきぎくぐけげこごさざしじすずせぜそぞただちっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろわゐゑをんァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヰヱヲンヴヶ'
+edict_kana_regexp=re.compile("^[%s]*$" % edict_kana)
+def is_kana(string):
+    return re.match(edict_kana_regexp, string) is not None
+
+def has_alpha(string):
+    return re.search('[a-z]', string, re.I) is not None
+
 regexp_store = {}
 def get_regex(pattern, flags):
     '''Return a compiled regexp from persistent store; make one if needed.
@@ -209,7 +218,4 @@ def guess_search(cur, conditions):
             return res
     return []
 
-
-def has_alpha(string):
-    return re.search('[a-z]', string, re.I) is not None
 

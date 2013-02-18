@@ -115,8 +115,9 @@ else:
         # alphabet probably means English; smarter order to
         # search.
         fields = ('gloss', 'kanji', 'reading')
+    elif is_kana(args.query):
+        fields = ('reading', 'kanji', 'gloss')
     else:
-        # TODO: if string is kana-only, search reading first.
         fields = ('kanji', 'reading', 'gloss')
 
 if args.extent != 'auto':
