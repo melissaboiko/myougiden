@@ -22,6 +22,7 @@
 
  - improve install script/distutils
    - pypi
+   - smarter handling of dev/installed environments
    - deb?
 
  - alternative backends?
