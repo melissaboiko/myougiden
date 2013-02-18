@@ -211,6 +211,7 @@ def guess_search(cur, conditions):
         res = search_by(cur, **condition)
         if len(res) > 0:
             return res
+    return []
 
 
 def has_alpha(string):
@@ -225,13 +226,13 @@ if __name__ == '__main__':
     ag = ap.add_argument_group('Type of query',
                                '''What to look for.  If not provided, the program will attempt to guess
 the query type.''')
-    ag.add_argument('-k', '--by-kanji', action='store_const', dest='field', const='kanji', default='auto',
+    ag.add_argument('-k', '--kanji', action='store_const', dest='field', const='kanji', default='auto',
                     help='''Return entries matching query on kanji.''')
 
-    ag.add_argument('-r', '--by-reading', action='store_const', dest='field', const='reading',
+    ag.add_argument('-r', '--reading', action='store_const', dest='field', const='reading',
                     help='''Return entries matching query on reading (in kana).''')
 
-    ag.add_argument('-g', '--by-gloss', action='store_const', dest='field', const='gloss',
+    ag.add_argument('-g', '--gloss', action='store_const', dest='field', const='gloss',
                     help='''Return entries matching query on glosses (English
 translations/meaning).''')
 
@@ -362,10 +363,13 @@ uppercase letter in query.''')
     con, cur = opendb(case_sensitive=args.case_sensitive)
     entries = guess_search(cur, conditions)
 
-    if args.output_mode == 'human':
-        rows = [fetch_entry(cur, ent_seq) for ent_seq in entries]
-        print("\n\n".join([format_entry_human(*row) for row in rows]))
+    if len(entries) > 0:
+        if args.output_mode == 'human':
+            rows = [fetch_entry(cur, ent_seq) for ent_seq in entries]
+            print("\n\n".join([format_entry_human(*row) for row in rows]))
 
-    elif args.output_mode == 'tab':
-        for row in [fetch_entry(cur, ent_seq) for ent_seq in entries]:
-            print(format_entry_tsv(*row))
+        elif args.output_mode == 'tab':
+            for row in [fetch_entry(cur, ent_seq) for ent_seq in entries]:
+                print(format_entry_tsv(*row))
+    else:
+        sys.exit(1)
