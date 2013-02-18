@@ -25,7 +25,7 @@ class updatedb_install(install):
             print('Try running "updatedb-myougiden -f -d" and see what happens.')
 
         print('''
-Edict/JMdict is a frequently updated project. If you want to keep up
+Edict/JMdict is a frequently updated dictionary. If you want to keep up
 with recent entries, try adding a call to "updatedb-myougiden -f -d"
 to cron (for example in /etc/cron.weekly/myougiden ).
 ''')
