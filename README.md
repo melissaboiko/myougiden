@@ -7,7 +7,7 @@ myougiden saves EDICT data in sqlite3 format. This costs some disk
 space (currently about 50MiB), but with indexes, it seems to be
 reasonably fast.
 
-If you'd like to try it, you need python ≥ 3.2 and pip:
+If you'd like to try it, you need python 3 and pip:
 
     $ sudo apt-get install python3 python3-pip
     $ sudo pip install myougiden

@@ -18,6 +18,9 @@ setup(name='myougiden',
       py_modules=['myougiden'],
       scripts=['bin/myougiden', 'bin/updatedb-myougiden'],
       license='GPLv3',
+      install_requires=[
+          'Python >= 3.1', # can I do this?
+          ],
       classifiers=[
           'Development Status :: 3 - Alpha',
           'Environment :: Console',
