@@ -25,3 +25,6 @@ Sample usage:
     $ myougiden -p 茶 # include partial matches
     $ myougiden -x -t '茶.' # regexp search; tab-separated, one-line output
 
+EDICT/JMdict is a frequently updated dictionary.  If you'd like to keep up
+with new entries and corrections, consider adding `update-myougiden -f` to
+cron (for example, in /etc/cron.weekly/myougiden ).
