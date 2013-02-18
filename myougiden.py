@@ -100,36 +100,55 @@ FORMATTING={
         'match': ('red', None, ['bold'])
 }
 
-def fmt(string, style, colorize):
-    if colorize:
-        return colored(string, *(FORMATTING[style]))
+def fmt(string, style):
+    return colored(string, *(FORMATTING[style]))
+
+
+def format_entry_tsv(kanjis, readings, senses, search_params=None, color=False):
+    if color:
+        return '%s\t%s\t%s' % (
+                fmt('；', 'subdue').join([fmt(r, 'reading') for r in readings]),
+                fmt('；', 'subdue').join([fmt(k, 'kanji') for k in kanjis]),
+                "\t".join([fmt('; ', 'subdue').join(glosses_list) for glosses_list in senses])
+                )
     else:
-        return string
+        return '%s\t%s\t%s' % (
+                '；'.join(readings),
+                '；'.join(kanjis),
+                "\t".join(['; '.join(glosses_list) for glosses_list in senses])
+                )
+def format_entry_human(kanjis, readings, senses, search_params=None, color=True):
 
+    sep_full = '；'
+    sep_half = '; '
 
-def format_entry_tsv(kanjis, readings, senses, c=False):
-    return '%s\t%s\t%s' % (
-        fmt('；', 'subdue', c).join([fmt(r, 'reading', c) for r in readings]),
-        fmt('；', 'subdue', c).join([fmt(k, 'kanji', c) for k in kanjis]),
-        "\t".join([fmt('; ', 'subdue', c).join(glosses_list) for glosses_list in senses])
-        )
+    glosses = {}
+    if color:
+        sep_full = fmt(sep_full, 'subdue')
+        sep_half = fmt(sep_half, 'subdue')
+        readings = [fmt(r, 'reading') for r in readings]
+        kanjis = [fmt(k, 'kanji') for k in kanjis]
 
-def format_entry_human(kanjis, readings, senses, c=True):
     s = ''
 
-    s += fmt('；', 'subdue', c).join([fmt(r, 'reading', c) for r in readings])
+    s += sep_full.join(readings)
 
     if len(kanjis) > 0:
         s += "\n"
-        s += fmt('；', 'subdue', c).join([fmt(k, 'kanji', c) for k in kanjis])
+        s += sep_full.join(kanjis)
 
-    i=1
-    for glosses_list in senses:
+    for sensenum, glosses_list in enumerate(senses, start=1):
         s += "\n "
-        s += fmt('%d.' % i, 'misc', c)
-        s += ' '
-        s += fmt('; ', 'subdue', c).join(glosses_list)
-        i += 1
+
+        sn = str(sensenum) + '.'
+        if color:
+            sn = fmt(sn, 'misc')
+        s += sn + ' '
+
+        # if color:
+        #     glosses_list = [fmt(g, 'gloss') for g in glosses_list]
+
+        s += sep_half.join(glosses_list)
 
     return s
 
@@ -233,21 +252,25 @@ WHERE %s.%s %s
 
 
 def guess_search(cur, conditions):
-    '''Try many searches, return first successful.
+    '''Try many searches; stop at first successful.
 
     conditions -- list of dictionaries.
 
     Each dictionary in *conditions is a set of keyword arguments for
     search_by() (including the mandatory arguments!).
 
-    guess_search will try all in order, and return the first one with
+    guess_search will try all in order, and choose the first one with
     >0 results.
+
+    Return value: 2-tuple (condition, entries) where:
+     - condition is the chosen search condition
+     - entries is a list of entries (see search_by() )
     '''
 
     for condition in conditions:
         res = search_by(cur, **condition)
         if len(res) > 0:
-            return res
+            return (condition, res)
     return []
 
 
