@@ -16,7 +16,7 @@ If you'd like to try it:
     $ myougiden "tea ceremony" # try to guess what to query
     $ myougiden 茶
     $ myougiden -p 茶 # include partial matches
-    $ myougiden -t -x '茶.' # regexp search; tab-separated, one-line output
+    $ myougiden -x -t '茶.' # regexp search; tab-separated, one-line output
 
     $ # if you don't want to install, you can try it from the source dir:
     $ bin/updatedb-myougiden -f -d
