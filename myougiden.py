@@ -195,6 +195,7 @@ def guess_search(cur, conditions):
         res = search_by(cur, **condition)
         if len(res) > 0:
             return res
+    return []
 
 def has_alpha(string):
     return re.search('[a-z]', string, re.I) is not None
@@ -343,10 +344,13 @@ uppercase letter in query.''')
     con, cur = opendb(case_sensitive=args.case_sensitive)
     entries = guess_search(cur, conditions)
 
-    if args.output_mode == 'human':
-        rows = [fetch_entry(cur, ent_seq) for ent_seq in entries]
-        print("\n\n".join([format_entry_human(*row) for row in rows]))
+    if len(entries) > 0:
+        if args.output_mode == 'human':
+            rows = [fetch_entry(cur, ent_seq) for ent_seq in entries]
+            print("\n\n".join([format_entry_human(*row) for row in rows]))
 
-    elif args.output_mode == 'tab':
-        for row in [fetch_entry(cur, ent_seq) for ent_seq in entries]:
-            print(format_entry_tsv(*row))
+        elif args.output_mode == 'tab':
+            for row in [fetch_entry(cur, ent_seq) for ent_seq in entries]:
+                print(format_entry_tsv(*row))
+    else:
+        sys.exit(1)
