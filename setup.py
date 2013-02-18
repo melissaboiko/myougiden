@@ -4,9 +4,14 @@ import os
 from distutils.command.install import install
 from distutils.core import setup
 
+with open(os.path.join(os.path.dirname(__file__), 'README.md')) as f:
+      # hacky markdown to ResT
+    longdesc=f.read().replace(":\n", "::\n")
+
 setup(name='myougiden',
-      version='0.1.1',
+      version='0.1.2',
       description='Japanese/English command-line dictionary',
+      long_description=longdesc,
       author='Leonardo Boiko',
       author_email='leoboiko@gmail.com',
       url='https://github.com/leoboiko/myougiden',
