@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 
-from myougiden import *
+import sys
+import gzip
+
+try:
+    from myougiden import *
+except ImportError:
+    sys.path.append('.')
+    from myougiden import *
+
 import urllib.request
 import sqlite3 as sql
 # import lxml.etree as ET
@@ -145,16 +153,21 @@ if __name__ == '__main__':
     import argparse
     ap = argparse.ArgumentParser()
 
-    ap.add_argument('-j', '--jmdict', default='./JMdict_e.gz', metavar='PATH',
+    ap.add_argument('-j', '--jmdict',
+                    default=os.path.join(PATHS['sharedir'], 'JMdict_e.gz'),
+                    metavar='PATH',
                     help="Path to JMdict_e.gz file (default: %(default)s)")
 
     ap.add_argument('-f', '--fetch', action='store_true',
                     help=("Try to fetch JMdict_e.gz from %s" % PATHS['jmdict_url']))
 
+    ap.add_argument('-d', '--delete', action='store_true',
+                    help="Delete JMdict_e.gz file after use.")
+
     args = ap.parse_args()
 
     if args.fetch:
-        print("Fetching %s from %s, please wait..." % (args.jmdict, PATHS['jmdict_url']))
+        print("Fetching %s to %s, please wait..." % (PATHS['jmdict_url'], args.jmdict))
         fetch_jmdict(args.jmdict)
 
     print("Updating database at %s from %s, please wait..." %
@@ -162,5 +175,6 @@ if __name__ == '__main__':
     make_database(gzip.open(args.jmdict, 'r'),
                   PATHS['database'])
 
-
-
+    if args.delete:
+        print("Deleting %s." % args.jmdict)
+        os.remove(args.jmdict)

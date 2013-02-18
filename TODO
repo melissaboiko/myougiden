@@ -22,8 +22,7 @@
 
  - better documentation
 
- - install script
-   - sane filenames and paths
+ - install script/distutils
 
  - alternative backends?
   - better benchmarks to compare them

@@ -2,15 +2,25 @@
 import timeit
 import subprocess
 import builtins
+import sys
+import os
 
 devnull = open('/dev/null', 'w')
+
+myouscript = os.path.realpath(
+    os.path.join(
+        os.path.dirname(__file__),
+        '..',
+        'bin',
+        'myougiden'
+        ))
 
 def call(*args):
     subprocess.call(args, stdout=devnull)
 
 # low ent_seq
 def quicksearch1():
-    call('./myougiden.py',
+    call(myouscript,
          '-e', 'whole',
          '--reading',
          '--output-mode', 'tab',
@@ -18,14 +28,14 @@ def quicksearch1():
 
 # high ent_seq
 def quicksearch2():
-    call('./myougiden.py',
+    call(myouscript,
          '-e', 'whole',
          '--kanji',
          '--output-mode', 'tab',
          '首鼠')
 
 def quicksearch3():
-    call('./myougiden.py',
+    call(myouscript,
          '-e', 'whole',
          '--gloss',
          '--output-mode', 'tab',
@@ -33,13 +43,13 @@ def quicksearch3():
 
 # try to guess everything and fail
 def slowsearch1():
-    call('./myougiden.py',
+    call(myouscript,
          '-e', 'auto',
          '--output-mode', 'human',
          '亞衣有会尾')
 
 def slowsearch2():
-    call('./myougiden.py',
+    call(myouscript,
          '-x',
          '-e', 'auto',
          '--output-mode', 'human',
@@ -47,7 +57,7 @@ def slowsearch2():
 
 # sometimes non-regexp word search seems especially slow
 def slowsearch3():
-    call('./myougiden.py',
+    call(myouscript,
          '-e', 'auto',
          '--output-mode', 'human',
          'word')
