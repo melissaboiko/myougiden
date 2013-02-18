@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import subprocess
+import os
 from distutils.command.install import install
 from distutils.core import setup
 
@@ -9,10 +10,17 @@ class updatedb_install(install):
         install.run(self)
 
         print("\nWill now attempt to create the database.")
-        r = subprocess.call(['updatedb-myougiden', '-f', '-d'])
-        if r == 0:
+
+        try:
+            # add location of scripts just installed to PATH
+            os.environ['PATH'] = self.install_scripts + ':' + os.environ['PATH']
+            r = subprocess.call(['updatedb-myougiden', '-f', '-d'])
+            if r != 0:
+                raise RuntimeError("Command failed; exit status %d" % r)
+
             print('Success in installing database! myougiden(1) ready to use.')
-        else:
+        except Exception as e:
+            print(e)
             print('ERROR: could not download & install database! myougiden cannot be used.')
             print('Try running "updatedb-myougiden -f -d" and see what happens.')
 
