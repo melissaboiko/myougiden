@@ -80,46 +80,55 @@ def opendb(case_sensitive=False):
 
     return con, cur
 
-def color_reading(string):
-    return colored(string, 'magenta', attrs=['bold'])
+# style : args
+# *args as for colored()
+FORMATTING={
+        'reading': ('magenta', None, ['bold']),
 
-def color_kanji(string):
-    # TODO: use blue for clear bg, cyan for dark bg
-    return colored(string, 'cyan')
+        # TODO: use blue for clear bg, cyan for dark bg
+        'kanji': ('cyan', None, None),
 
-def color_highlight(string):
-    # careful: green/red is the most common color blindness
-    return colored(string, 'green')
+        # default
+        # 'gloss':
 
-def color_subdue(string):
-    # non-bold grey doesn't even show in my dark xterm.
-    return colored(string, 'yellow')
+        # careful: green/red is the most common color blindness
+        'highlight': ('green', None, ['bold']),
 
-def color_match(string):
-    return colored(string, 'red', attrs=['bold'])
+        # non-bold grey doesn't even show in my dark xterm.
+        'subdue': ('yellow', None, None),
 
-def format_entry_tsv(kanjis, readings, senses, color=False):
+        'match': ('red', None, ['bold'])
+}
+
+def fmt(string, style, colorize):
+    if colorize:
+        return colored(string, *(FORMATTING[style]))
+    else:
+        return string
+
+
+def format_entry_tsv(kanjis, readings, senses, c=False):
     return '%s\t%s\t%s' % (
         '；'.join(kanjis),
         '；'.join(readings),
         "\t".join(['; '.join(glosses_list) for glosses_list in senses])
         )
 
-def format_entry_human(kanjis, readings, senses, color=True):
+def format_entry_human(kanjis, readings, senses, c=True):
     s = ''
 
-    s += color_subdue('；').join([color_reading(r) for r in readings])
+    s += fmt('；', 'subdue', c).join([fmt(r, 'reading', c) for r in readings])
 
     if len(kanjis) > 0:
         s += "\n"
-        s += color_subdue('；').join([color_kanji(k) for k in kanjis])
+        s += fmt('；', 'subdue', c).join([fmt(k, 'kanji', c) for k in kanjis])
 
     i=1
     for glosses_list in senses:
         s += "\n "
-        s += color_highlight("%d." % i)
+        s += fmt('%d.' % i, 'highlight', c)
         s += ' '
-        s += color_subdue('; ').join(glosses_list)
+        s += fmt('; ', 'subdue', c).join(glosses_list)
         i += 1
 
     return s

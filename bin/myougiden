@@ -190,10 +190,10 @@ entries = guess_search(cur, conditions)
 if len(entries) > 0:
     if args.output_mode == 'human':
         rows = [fetch_entry(cur, ent_seq) for ent_seq in entries]
-        print("\n\n".join([format_entry_human(*row, color=args.color) for row in rows]))
+        print("\n\n".join([format_entry_human(*row, c=args.color) for row in rows]))
 
     elif args.output_mode == 'tab':
         for row in [fetch_entry(cur, ent_seq) for ent_seq in entries]:
-            print(format_entry_tsv(*row))
+            print(format_entry_tsv(*row, c=args.color))
 else:
     sys.exit(1)
