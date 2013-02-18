@@ -27,7 +27,7 @@ def quicksearch2():
 def quicksearch3():
     call('./myougiden.py',
          '-e', 'whole',
-         '--sense',
+         '--gloss',
          '--output-mode', 'tab',
          'acetylcellulose')
 
