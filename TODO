@@ -12,7 +12,10 @@
    - pitch-accent data (from where?)
 
  - output:
-   - color
+   - color output:
+     - light background mode
+     - color matches
+     - color for tab mode (why not?)
    - romaji output
      - hep and kun
    - better wrapping for "human" output
