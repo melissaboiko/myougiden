@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import os
+import errno
 import sys
 import gzip
 import sqlite3 as sql
@@ -121,7 +123,16 @@ def make_database(jmdict, sqlite):
     try:
         con, cur = opendb()
     except sql.OperationalError:
-        os.makedirs(os.path.realpath(PATHS['vardir']), mode=0o755, exist_ok=True)
+        # would require 3.2
+        # os.makedirs(os.path.realpath(PATHS['vardir']), mode=0o755, exist_ok=True)
+
+        try:
+            os.makedirs(os.path.realpath(PATHS['vardir']), mode=0o755)
+        except OSError as e:
+            if e.errno == errno.EEXIST and os.path.isdir(PATHS['vardir']):
+                pass
+            else:
+                raise e
         con, cur = opendb()
 
     tree = ET.parse(jmdict)
@@ -171,8 +182,8 @@ if __name__ == '__main__':
     ap.add_argument('-f', '--fetch', action='store_true',
                     help=("Try to fetch JMdict_e.gz from %s" % PATHS['jmdict_url']))
 
-    ap.add_argument('-d', '--delete', action='store_true',
-                    help="Delete JMdict_e.gz file after use.")
+    ap.add_argument('-k', '--keep', action='store_true',
+                    help="Keep downloaded JMdict_e.gz file after use.")
 
     args = ap.parse_args()
 
@@ -185,6 +196,6 @@ if __name__ == '__main__':
     make_database(gzip.open(args.jmdict, 'r'),
                   PATHS['database'])
 
-    if args.delete:
+    if args.fetch and not args.keep:
         print("Deleting %s." % args.jmdict)
         os.remove(args.jmdict)

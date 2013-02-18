@@ -2,6 +2,7 @@ import sys
 import os
 import re
 import sqlite3 as sql
+from termcolor import *
 
 PATHS = {}
 
@@ -58,6 +59,8 @@ def match_word_insensitive(word, field):
     reg = get_regex(r'\b' + re.escape(word) + r'\b', re.I)
     return reg.search(field) is not None
 
+def testdb():
+    return os.path.isfile(PATHS['database'])
 
 def opendb(case_sensitive=False):
     '''Open SQL database; returns (con, cur).'''
@@ -77,26 +80,55 @@ def opendb(case_sensitive=False):
 
     return con, cur
 
-def format_entry_tsv(kanjis, readings, senses):
+# style : args
+# *args as for colored()
+FORMATTING={
+        'reading': ('magenta', None, None),
+
+        # TODO: use blue for clear bg, cyan for dark bg
+        'kanji': ('cyan', None, None),
+
+        # default
+        # 'gloss':
+
+        # careful: green/red is the most common color blindness
+        'misc': ('green', None, None),
+
+        # non-bold grey doesn't even show in my dark xterm.
+        'subdue': ('yellow', None, None),
+
+        'match': ('red', None, ['bold'])
+}
+
+def fmt(string, style, colorize):
+    if colorize:
+        return colored(string, *(FORMATTING[style]))
+    else:
+        return string
+
+
+def format_entry_tsv(kanjis, readings, senses, c=False):
     return '%s\t%s\t%s' % (
-        '；'.join(kanjis),
-        '；'.join(readings),
-        "\t".join(['; '.join(glosses_list) for glosses_list in senses])
+        fmt('；', 'subdue', c).join([fmt(r, 'reading', c) for r in readings]),
+        fmt('；', 'subdue', c).join([fmt(k, 'kanji', c) for k in kanjis]),
+        "\t".join([fmt('; ', 'subdue', c).join(glosses_list) for glosses_list in senses])
         )
 
-def format_entry_human(kanjis, readings, senses):
+def format_entry_human(kanjis, readings, senses, c=True):
     s = ''
 
-    s += '；'.join(readings)
+    s += fmt('；', 'subdue', c).join([fmt(r, 'reading', c) for r in readings])
 
     if len(kanjis) > 0:
         s += "\n"
-        s += '；'.join(kanjis)
+        s += fmt('；', 'subdue', c).join([fmt(k, 'kanji', c) for k in kanjis])
 
-    # perhaps use a gloss table after all...
     i=1
     for glosses_list in senses:
-        s += "\n  %d. %s" % (i, '; '.join(glosses_list))
+        s += "\n "
+        s += fmt('%d.' % i, 'misc', c)
+        s += ' '
+        s += fmt('; ', 'subdue', c).join(glosses_list)
         i += 1
 
     return s

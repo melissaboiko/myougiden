@@ -1,36 +1,40 @@
 #!/usr/bin/env python3
 import subprocess
+import os
 from distutils.command.install import install
 from distutils.core import setup
 
-# http://stackoverflow.com/questions/1321270/how-to-extend-distutils-with-a-simple-post-install-script
-class updatedb_install(install):
-    def run(self):
-        install.run(self)
+with open(os.path.join(os.path.dirname(__file__), 'README.md')) as f:
+      # hacky markdown to ResT
+    longdesc=f.read().replace(":\n", "::\n")
 
-        print("\nWill now attempt to create the database.")
-        r = subprocess.call(['updatedb-myougiden', '-f', '-d'])
-        if r == 0:
-            print('Success in installing database! myougiden(1) ready to use.')
-        else:
-            print('ERROR: could not download & install database! myougiden cannot be used.')
-            print('Try running "updatedb-myougiden -f -d" and see what happens.')
-
-        print('''
-Edict/JMdict is a frequently updated project. If you want to keep up
-with recent entries, try adding a call to "updatedb-myougiden -f -d"
-to cron (for example in /etc/cron.weekly/myougiden ).
-''')
-        
 setup(name='myougiden',
-      version='0.1',
+      version='0.1.3dev',
       description='Japanese/English command-line dictionary',
+      long_description=longdesc,
       author='Leonardo Boiko',
       author_email='leoboiko@gmail.com',
       url='https://github.com/leoboiko/myougiden',
       py_modules=['myougiden'],
       scripts=['bin/myougiden', 'bin/updatedb-myougiden'],
-      cmdclass=dict(install=updatedb_install),
       license='GPLv3',
+      install_requires=[
+          'termcolor',
+          'Python >= 3.1', # can I do this?
+          ],
+      classifiers=[
+          'Development Status :: 3 - Alpha',
+          'Environment :: Console',
+          'Intended Audience :: Education',
+          'Intended Audience :: End Users/Desktop',
+          'Intended Audience :: Science/Research',
+          'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+          'Natural Language :: English',
+          'Natural Language :: Japanese',
+          'Operating System :: POSIX',
+          'Programming Language :: Python :: 3',
+          'Topic :: Education',
+          'Topic :: Text Processing :: Linguistic',
+          ]
      )
 
