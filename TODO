@@ -15,11 +15,13 @@
    - color output:
      - light background mode
      - color matches
-     - color for tab mode (why not?)
    - romaji output
      - hep and kun
    - better wrapping for "human" output
    - auto-pager
+   - tsv output:
+     - document
+     - is this way the best of represeting senses/glosses?
 
  - better documentation
    - gentle reminder to run updatedb if sqlite not found

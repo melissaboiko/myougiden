@@ -109,9 +109,9 @@ def fmt(string, style, colorize):
 
 def format_entry_tsv(kanjis, readings, senses, c=False):
     return '%s\t%s\t%s' % (
-        '；'.join(kanjis),
-        '；'.join(readings),
-        "\t".join(['; '.join(glosses_list) for glosses_list in senses])
+        fmt('；', 'subdue', c).join([fmt(r, 'reading', c) for r in readings]),
+        fmt('；', 'subdue', c).join([fmt(k, 'kanji', c) for k in kanjis]),
+        "\t".join([fmt('; ', 'subdue', c).join(glosses_list) for glosses_list in senses])
         )
 
 def format_entry_human(kanjis, readings, senses, c=True):
