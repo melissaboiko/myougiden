@@ -19,6 +19,7 @@ setup(name='myougiden',
       scripts=['bin/myougiden', 'bin/updatedb-myougiden'],
       license='GPLv3',
       install_requires=[
+          'termcolor',
           'Python >= 3.1', # can I do this?
           ],
       classifiers=[

@@ -71,6 +71,11 @@ ag.add_argument('-t', '--tsv', '--tab', action='store_const', const='tab', dest=
 
 ag.add_argument('--human', action='store_const', const='human', dest='output_mode',
                 help="Equivalent to --output-mode=human")
+ag.add_argument('--color', choices=('yes', 'no', 'auto'), default='auto',
+                help='''Whether to colorize output.  Default 'auto' means to
+colorize if writing to a terminal in human mode.''')
+ag.add_argument('-c', action='store_const', const='yes', dest='color',
+                help='Equivalent to --color=yes')
 
 ap.add_argument('query', help='Text to look for.', metavar='QUERY')
 
@@ -85,6 +90,14 @@ if args.output_mode == 'auto':
     else:
         args.output_mode = 'tab'
 
+if args.color == 'auto':
+    if args.output_mode == 'human' and sys.stdout.isatty():
+        args.color = 'yes'
+    else:
+        args.color = 'no'
+
+# convert to boolean
+args.color = args.color == 'yes'
 
 if not args.case_sensitive:
     if  re.search("[A-Z]", args.query):
@@ -102,6 +115,7 @@ if args.extent == 'word' and args.field in ('kanji', 'reading'):
 # by search_by().
 search_args = vars(args).copy() # turn Namespace to dict
 del search_args['output_mode']
+del search_args['color']
 
 # we'll iterate over all required 'field' and 'extent' conditions.
 #
@@ -176,7 +190,7 @@ entries = guess_search(cur, conditions)
 if len(entries) > 0:
     if args.output_mode == 'human':
         rows = [fetch_entry(cur, ent_seq) for ent_seq in entries]
-        print("\n\n".join([format_entry_human(*row) for row in rows]))
+        print("\n\n".join([format_entry_human(*row, color=args.color) for row in rows]))
 
     elif args.output_mode == 'tab':
         for row in [fetch_entry(cur, ent_seq) for ent_seq in entries]:

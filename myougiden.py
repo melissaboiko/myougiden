@@ -2,6 +2,7 @@ import sys
 import os
 import re
 import sqlite3 as sql
+from termcolor import *
 
 PATHS = {}
 
@@ -79,26 +80,46 @@ def opendb(case_sensitive=False):
 
     return con, cur
 
-def format_entry_tsv(kanjis, readings, senses):
+def color_reading(string):
+    return colored(string, 'magenta', attrs=['bold'])
+
+def color_kanji(string):
+    # TODO: use blue for clear bg, cyan for dark bg
+    return colored(string, 'cyan')
+
+def color_highlight(string):
+    # careful: green/red is the most common color blindness
+    return colored(string, 'green')
+
+def color_subdue(string):
+    # non-bold grey doesn't even show in my dark xterm.
+    return colored(string, 'yellow')
+
+def color_match(string):
+    return colored(string, 'red', attrs=['bold'])
+
+def format_entry_tsv(kanjis, readings, senses, color=False):
     return '%s\t%s\t%s' % (
         '；'.join(kanjis),
         '；'.join(readings),
         "\t".join(['; '.join(glosses_list) for glosses_list in senses])
         )
 
-def format_entry_human(kanjis, readings, senses):
+def format_entry_human(kanjis, readings, senses, color=True):
     s = ''
 
-    s += '；'.join(readings)
+    s += color_subdue('；').join([color_reading(r) for r in readings])
 
     if len(kanjis) > 0:
         s += "\n"
-        s += '；'.join(kanjis)
+        s += color_subdue('；').join([color_kanji(k) for k in kanjis])
 
-    # perhaps use a gloss table after all...
     i=1
     for glosses_list in senses:
-        s += "\n  %d. %s" % (i, '; '.join(glosses_list))
+        s += "\n "
+        s += color_highlight("%d." % i)
+        s += ' '
+        s += color_subdue('; ').join(glosses_list)
         i += 1
 
     return s
