@@ -11,13 +11,15 @@ If you'd like to try it:
 
     $ git clone git://github.com/leoboiko/myougiden.git
     $ cd myougiden
+    $ sudo python3 setup.py install
+    $ myougiden -h # help
+    $ myougiden "tea ceremony" # try to guess what to query
+    $ myougiden 茶
+    $ myougiden -p 茶 # include partial matches
+    $ myougiden -t -x '茶.' # regexp search; tab-separated, one-line output
 
+    $ # if you don't want to install, you can try it from the source dir:
     $ bin/updatedb-myougiden -f -d
-    # alternatively: download JMdict_e.gz, run updatedb-myougiden -j JMdict_e.gz
-
+    $ # alternatively: download JMdict_e.gz, do updatedb-myougiden -j JMdict_e.gz
     $ bin/myougiden -h # help
-    $ bin/myougiden "tea ceremony" # try to guess what to query
-    $ bin/myougiden 茶
-    $ bin/myougiden -p 茶 # include partial matches
-    $ bin/myougiden -t -x '茶.' # regexp search; tab-separated, one-line output
   

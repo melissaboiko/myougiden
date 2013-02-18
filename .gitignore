@@ -2,3 +2,6 @@ JMdict*
 jmdict.sqlite
 *journal
 __pycache*
+MANIFEST
+dist
+build
