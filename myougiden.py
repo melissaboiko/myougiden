@@ -207,13 +207,13 @@ if __name__ == '__main__':
     ag = ap.add_argument_group('Type of query',
                                '''What to look for.  If not provided, the program will attempt to guess
 the query type.''')
-    ag.add_argument('-k', '--by-kanji', action='store_const', dest='field', const='kanji', default='auto',
+    ag.add_argument('-k', '--kanji', action='store_const', dest='field', const='kanji', default='auto',
                     help='''Return entries matching query on kanji.''')
 
-    ag.add_argument('-r', '--by-reading', action='store_const', dest='field', const='reading',
+    ag.add_argument('-r', '--reading', action='store_const', dest='field', const='reading',
                     help='''Return entries matching query on reading (in kana).''')
 
-    ag.add_argument('-s', '--by-sense', action='store_const', dest='field', const='sense',
+    ag.add_argument('-s', '--sense', action='store_const', dest='field', const='sense',
                     help='''Return entries matching query on sense (English
 translation).''')
 
