@@ -9,7 +9,7 @@ with open(os.path.join(os.path.dirname(__file__), 'README.md')) as f:
     longdesc=f.read().replace(":\n", "::\n")
 
 setup(name='myougiden',
-      version='0.1.2',
+      version='0.1.3dev',
       description='Japanese/English command-line dictionary',
       long_description=longdesc,
       author='Leonardo Boiko',
