@@ -320,5 +320,5 @@ def guess_search(cur, conditions):
         res = search_by(cur, **condition)
         if len(res) > 0:
             return (condition, res)
-    return []
+    return (None, [])
 

@@ -187,7 +187,7 @@ you might like to add that command to cron (for example, in
 con, cur = opendb(case_sensitive=args.case_sensitive)
 chosen_search, entries = guess_search(cur, conditions)
 
-if len(entries) > 0:
+if chosen_search:
     if args.output_mode == 'human':
         rows = [fetch_entry(cur, ent_seq) for ent_seq in entries]
         print("\n\n".join([format_entry_human(*row, search_params=chosen_search, color=args.color) for row in rows]))
