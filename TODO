@@ -27,11 +27,12 @@
  - config file
    - option --saveconf
 
- - improve install script/distutils
+ - improve install script/distutils/updatedb
    - smarter handling of dev vs. installed environments
    - can we make pypi post-uninstall delete database?
    - deb?
    - store database version; warns if requiring upgrade
+   - auto-nice/ionice updatedb
 
  - alternative backends?
   - better benchmarks to compare them
