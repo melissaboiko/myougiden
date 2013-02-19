@@ -14,7 +14,6 @@
  - output:
    - color output:
      - light background mode
-     - bold in Japanese kind of suck for bitmaped fonts...
    - romaji output
      - hep and kun
    - better wrapping for "human" output
@@ -24,7 +23,6 @@
      - is this way the best of represeting senses/glosses?
 
  - better documentation
-   - gentle reminder to run updatedb if sqlite not found
 
  - config file
    - option --saveconf
