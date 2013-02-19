@@ -5,6 +5,7 @@ import errno
 import sys
 import gzip
 import sqlite3 as sql
+import tempfile
 
 try:
     from myougiden import *
@@ -130,9 +131,7 @@ def insert_entry(cur, ent_seq, kanjis, readings, senses):
 
 
 def make_database(jmdict, sqlite):
-    dbdir = os.path.realpath(os.path.dirname(PATHS['database']))
-    if not os.path.isdir(dbdir):
-        os.makedirs(dbdir, mode=0o755)
+    mkdir_p(os.path.dirname(PATHS['database']))
 
     con = sql.connect(PATHS['database'])
     cur = con.cursor()
@@ -165,44 +164,60 @@ def make_database(jmdict, sqlite):
     cur.close()
     con.commit()
 
-def fetch_jmdict(outfile):
-    try:
-        req = urllib.request.urlretrieve(PATHS['jmdict_url'], outfile)
-    except IOError:
-        os.makedirs(os.path.realpath(PATHS['vardir']), mode=0o755, exist_ok=True)
-        req = urllib.request.urlretrieve(PATHS['jmdict_url'], outfile)
 
 if __name__ == '__main__':
     import argparse
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+
+    ap.add_argument('-f', '--fetch', action='store_true',
+                    help=('''Try to fetch JMdict_e.gz from
+%s .''' % PATHS['jmdict_url']))
+
+    ap.add_argument('-k', '--keep', action='store_true',
+                    help='''Keep downloaded JMdict_e.gz file after fetching.  If
+not set, it will be automatically deleted after use.''')
 
     ap.add_argument('-j', '--jmdict',
                     default=os.path.join(PATHS['vardir'], 'JMdict_e.gz'),
                     metavar='PATH',
-                    help="Path to JMdict_e.gz file (default: %(default)s)")
-
-    ap.add_argument('-f', '--fetch', action='store_true',
-                    help=("Try to fetch JMdict_e.gz from %s" % PATHS['jmdict_url']))
-
-    ap.add_argument('-k', '--keep', action='store_true',
-                    help="Keep downloaded JMdict_e.gz file after use.")
-
+                    help='''Path of local JMdict_e.gz file. Default:
+%(default)s .''')
     args = ap.parse_args()
 
-    if args.fetch:
-        print("Fetching %s to %s, please wait..." % (PATHS['jmdict_url'], args.jmdict))
-        fetch_jmdict(args.jmdict)
 
-    print("Updating database at %s from %s, please wait..." %
-          (PATHS['database'], args.jmdict))
+    localjm_exists = os.path.isfile(args.jmdict)
 
-    try:
-        make_database(gzip.open(args.jmdict, 'r'), PATHS['database'])
-    except IOError:
-        print("Error: Couldn't read JMdict file at %s ." % args.jmdict)
-        print("Fetch the file with -f, or point to the corret path with -j.")
-        sys.exit(1)
+    if args.fetch and not args.keep and localjm_exists:
+        # assume no one wants to keep old versions around
+        print("WARNING: Local JMdict exists at %s ." % args.jmdict)
+        print("         Will overwrite it with new version.")
+        args.keep = True
+
+    if not localjm_exists and not args.fetch:
+        # assume no one would want to call the script just to be told
+        # "there's no file, please fetch"
+        args.fetch = True
 
     if args.fetch and not args.keep:
-        print("Deleting %s." % args.jmdict)
-        os.remove(args.jmdict)
+        jmdesc = "temporary file"
+
+        # it seems that both gzip and urllib require visible filenames, and
+        # can't just work with in-memory file objects.
+        f, jmpath = tempfile.mkstemp()
+    else:
+        jmdesc = args.jmdict
+        jmpath = jmdesc
+        mkdir_p(os.path.dirname(jmpath))
+
+    if args.fetch:
+        print("Fetching %s to %s, please wait..." % (PATHS['jmdict_url'], jmdesc))
+        urllib.request.urlretrieve(PATHS['jmdict_url'], jmpath)
+
+    print("Updating database at %s from %s, please wait..." %
+          (PATHS['database'], jmdesc))
+
+    make_database(gzip.open(jmpath, 'r'), PATHS['database'])
+
+    if args.fetch and not args.keep:
+        print("Deleting %s." % jmdesc)
+        os.remove(jmpath)

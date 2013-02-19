@@ -1,3 +1,4 @@
+import errno
 import sys
 import os
 import re
@@ -21,6 +22,16 @@ def is_kana(string):
 
 def has_alpha(string):
     return re.search('[a-z]', string, re.I) is not None
+
+# from http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
+# convenience function because python < 3.2 has no exist_ok
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else: raise
 
 regexp_store = {}
 def get_regexp(pattern, flags):
