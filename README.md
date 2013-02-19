@@ -5,7 +5,7 @@ bare-bones.
 
 Features:
  - Regular expression support.
- - Partial, full, and (English) whole-word queries.
+ - Partial, full, and whole-word queries.
  - Intelligently find out what kind of query is intended.
  - Full color output, highlighting matches.
  - Option for tab-separated output, easily manipulable with Unix tools.
