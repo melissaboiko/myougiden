@@ -207,7 +207,10 @@ not set, it will be automatically deleted after use.''')
     else:
         jmdesc = args.jmdict
         jmpath = jmdesc
-        mkdir_p(os.path.dirname(jmpath))
+
+        dirname = os.path.dirname(jmpath)
+        if len(dirname) > 0:
+            mkdir_p(dirname)
 
     if args.fetch:
         print("Fetching %s to %s, please wait..." % (PATHS['jmdict_url'], jmdesc))
