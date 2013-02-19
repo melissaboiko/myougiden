@@ -45,7 +45,7 @@ Then, you need to compile the dictionary database at least once:
 
 EDICT/JMdict is a frequently updated dictionary.  If you'd like
 to keep up with new entries and corrections, consider adding
-`update-myougiden -f` to cron (for example, in
+`updatedb-myougiden -f` to cron (for example, in
 /etc/cron.weekly/myougiden ).
 
 Upgrading
