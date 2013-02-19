@@ -23,7 +23,6 @@ setup(name='myougiden',
       license='GPLv3',
       install_requires=[
           'termcolor',
-          'Python >= 3.1', # can I do this?
           ],
       classifiers=[
           'Development Status :: 3 - Alpha',
