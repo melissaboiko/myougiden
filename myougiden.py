@@ -83,21 +83,25 @@ def opendb(case_sensitive=False):
 # style : args
 # *args as for colored()
 FORMATTING={
+        # color problems:
+        # - japanese bitmap fonts are kinda crummy in bold
+        # - non-bold gray doesn't even show in my dark xterm
+        # - green/red is the most common color blindness
+        # - it's very hard to impossible to detect if bg is dark or light
+        # - cyan is better for dark bg, blue for light
+
         'reading': ('magenta', None, None),
 
-        # TODO: use blue for clear bg, cyan for dark bg
         'kanji': ('cyan', None, None),
 
         # default
         # 'gloss':
 
-        # careful: green/red is the most common color blindness
         'misc': ('green', None, None),
 
-        # non-bold grey doesn't even show in my dark xterm.
         'subdue': ('yellow', None, None),
 
-        'match': ('red', None, ['bold'])
+        'match': ('red', None, None)
 }
 
 def fmt(string, style):
