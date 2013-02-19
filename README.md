@@ -10,7 +10,7 @@ reasonably fast.
 If you'd like to try it, you need python 3 and pip:
 
     $ sudo apt-get install python3 python3-pip
-    $ sudo pip install myougiden
+    $ sudo pip-3.2 install myougiden # use your version
 
 Then, you need to compile the dictionary database at least once:
 
