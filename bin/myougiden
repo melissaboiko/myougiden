@@ -139,34 +139,41 @@ if args.extent != 'auto':
 else:
     extents = ('whole', 'word', 'partial')
 
+if args.regexp:
+    regexp_flags = (True,)
+elif has_regexp_special(args.query):
+    regexp_flags = (False, True)
+else:
+    regexp_flags = (False,)
 
 conditions = []
-for extent in extents:
-    for field in fields:
+for regexp in regexp_flags:
+    for extent in extents:
+        for field in fields:
 
-        # the useless combination; we'll avoid it to avoid wasting
-        # time.
-        if extent == 'word' and field != 'gloss':
+            # the useless combination; we'll avoid it to avoid wasting
+            # time.
+            if extent == 'word' and field != 'gloss':
 
-            if args.extent == 'auto':
-                # we're trying all possibilities, so we can just
-                # skip this one.  other extents were/will be tried
-                # elsewhen in the loop.
-                continue
+                if args.extent == 'auto':
+                    # we're trying all possibilities, so we can just
+                    # skip this one.  other extents were/will be tried
+                    # elsewhen in the loop.
+                    continue
+                else:
+                    # not trying all possibilities; this is our only
+                    # pass in this field, so let's adjust it.
+                    sa = search_args.copy()
+                    sa['extent'] = 'whole'
             else:
-                # not trying all possibilities; this is our only
-                # pass in this field, so let's adjust it.
+                # simple case.
                 sa = search_args.copy()
-                sa['extent'] = 'whole'
-        else:
-            # simple case.
-            sa = search_args.copy()
-            sa['extent'] = extent
+                sa['extent'] = extent
 
-        sa['field'] = field
+            sa['field'] = field
+            sa['regexp'] = regexp
 
-        conditions.append(sa)
-
+            conditions.append(sa)
 
 try:
     con, cur = opendb(case_sensitive=args.case_sensitive)

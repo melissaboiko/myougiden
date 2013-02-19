@@ -23,6 +23,12 @@ def is_kana(string):
 def has_alpha(string):
     return re.search('[a-z]', string, re.I) is not None
 
+def has_regexp_special(string):
+    '''True if string has characters of regular expressions.'''
+    special = re.compile('[%s]' % re.escape(r'.^$*+?{}()[]\|'))
+    return special.search(string)
+
+
 # from http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
 # convenience function because python < 3.2 has no exist_ok
 def mkdir_p(path):
