@@ -17,15 +17,25 @@ import sqlite3 as sql
 # import lxml.etree as ET
 import xml.etree.cElementTree as ET
 
-def create_table(cur):
+def create_tables(cur):
     # what about a custom collation function?
 
     # my version of sqlite3 doesn't seem to work with executemany()
+    cur.execute('DROP TABLE IF EXISTS versions;')
     cur.execute('DROP TABLE IF EXISTS kanjis;')
     cur.execute('DROP TABLE IF EXISTS readings;')
     cur.execute('DROP TABLE IF EXISTS senses;')
     cur.execute('DROP TABLE IF EXISTS glosses;')
     cur.execute('DROP TABLE IF EXISTS entries;')
+
+    cur.execute('''
+      CREATE TABLE versions (
+        dbversion TEXT PRIMARY KEY
+      );
+    ''')
+    cur.execute('''
+      INSERT INTO versions VALUES ( ? );
+    ''', [DBVERSION])
 
     cur.execute('''
       CREATE TABLE
@@ -120,24 +130,16 @@ def insert_entry(cur, ent_seq, kanjis, readings, senses):
 
 
 def make_database(jmdict, sqlite):
-    try:
-        con, cur = opendb()
-    except sql.OperationalError:
-        # would require 3.2
-        # os.makedirs(os.path.realpath(PATHS['vardir']), mode=0o755, exist_ok=True)
+    dbdir = os.path.realpath(os.path.dirname(PATHS['database']))
+    if not os.path.isdir(dbdir):
+        os.makedirs(dbdir, mode=0o755)
 
-        try:
-            os.makedirs(os.path.realpath(PATHS['vardir']), mode=0o755)
-        except OSError as e:
-            if e.errno == errno.EEXIST and os.path.isdir(PATHS['vardir']):
-                pass
-            else:
-                raise e
-        con, cur = opendb()
+    con = sql.connect(PATHS['database'])
+    cur = con.cursor()
 
     tree = ET.parse(jmdict)
 
-    create_table(cur)
+    create_tables(cur)
 
     for entry in tree.findall('entry'):
         ent_seq = entry.find('ent_seq').text
@@ -193,8 +195,13 @@ if __name__ == '__main__':
 
     print("Updating database at %s from %s, please wait..." %
           (PATHS['database'], args.jmdict))
-    make_database(gzip.open(args.jmdict, 'r'),
-                  PATHS['database'])
+
+    try:
+        make_database(gzip.open(args.jmdict, 'r'), PATHS['database'])
+    except IOError:
+        print("Error: Couldn't read JMdict file at %s ." % args.jmdict)
+        print("Fetch the file with -f, or point to the corret path with -j.")
+        sys.exit(1)
 
     if args.fetch and not args.keep:
         print("Deleting %s." % args.jmdict)

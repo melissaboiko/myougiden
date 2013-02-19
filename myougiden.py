@@ -4,6 +4,8 @@ import re
 import sqlite3 as sql
 from termcolor import *
 
+DBVERSION = '1'
+
 PATHS = {}
 
 PATHS['pkgprefix'] = os.path.realpath(os.path.dirname(__file__))
@@ -59,14 +61,29 @@ def match_word_insensitive(word, field):
     reg = get_regexp(r'\b' + re.escape(word) + r'\b', re.I)
     return reg.search(field) is not None
 
-def testdb():
-    return os.path.isfile(PATHS['database'])
+
+class DatabaseAccessError(Exception):
+    pass
 
 def opendb(case_sensitive=False):
-    '''Open SQL database; returns (con, cur).'''
+    '''Open SQL database; returns (con, cur).
 
-    con = sql.connect(PATHS['database'])
-    cur = con.cursor()
+    Raises DatabaseAccessError if database is missing or the wrong version.'''
+
+    try:
+        con = sql.connect(PATHS['database'])
+        cur = con.cursor()
+    except sql.OperationalError as e:
+        raise DatabaseAccessError(str(e))
+
+    try:
+        cur.execute('SELECT dbversion FROM versions;')
+        dbversion = cur.fetchone()[0]
+    except sql.OperationalError:
+        raise DatabaseAccessError("Couldn't read database to check version")
+
+    if dbversion != DBVERSION:
+        raise DatabaseAccessError('Unkown database version %s' % dbversion)
 
     if case_sensitive:
         con.create_function('regexp', 2, regexp_sensitive)
@@ -77,8 +94,8 @@ def opendb(case_sensitive=False):
         con.create_function('match', 2, match_word_insensitive)
         cur.execute('PRAGMA case_sensitive_like = 0;')
 
-
     return con, cur
+
 
 # style : args
 # *args as for colored()

@@ -167,9 +167,13 @@ for extent in extents:
 
         conditions.append(sa)
 
-if not testdb():
-    print('''
-Error: couldn't find dictionary database at %s
+
+try:
+    con, cur = opendb(case_sensitive=args.case_sensitive)
+except DatabaseAccessError as e:
+    print('''Error: Couldn't access dictionary database: %s.
+Expected database version %s at:
+%s
 
 Before using myougiden for the first time, you need to compile the JMdict
 (EDICT) dictionary.  Try running this command to download and compile it:
@@ -180,11 +184,11 @@ It will take a while, but lookups afterwards will be fast.
 
 JMdict is frequently updated.  If you want to keep up with new entries,
 you might like to add that command to cron (for example, in
-/etc/cron.weekly/myougiden ).
-''' % PATHS['database'])
-    sys.exit(1)
+/etc/cron.weekly/myougiden ).'''
+    % (str(e), DBVERSION, PATHS['database']))
 
-con, cur = opendb(case_sensitive=args.case_sensitive)
+    sys.exit(2)
+
 chosen_search, entries = guess_search(cur, conditions)
 
 if chosen_search:
