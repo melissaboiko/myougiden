@@ -83,6 +83,7 @@ Installing from sources
 Required python packages (available on pip):
 
  - termcolor
+ - argparse (only for Python ≤ 3.1)
 
 To install from github:
 
