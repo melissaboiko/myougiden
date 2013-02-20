@@ -43,6 +43,8 @@ Then, you need to compile the dictionary database at least once:
     $ sudo updatedb-myougiden -f
     # go have some coffee...
 
+That's it, have fun!
+
 EDICT/JMdict is a frequently updated dictionary.  If you'd like
 to keep up with new entries and corrections, consider adding
 `updatedb-myougiden -f` to cron (for example, in
