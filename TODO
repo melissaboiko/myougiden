@@ -35,6 +35,7 @@
    - smarter handling of dev vs. installed environments
    - can we make pypi post-uninstall delete database?
    - deb?
+   - lock database during update, restore old version if fail
 
  - alternative backends?
   - better benchmarks to compare them
