@@ -40,3 +40,6 @@
   - backend: EDICT2 with grep
   - backend: some NoSQL thing?
   - backend: some kind of "full-text search" thing?
+
+ - expat parser:
+   - is still parsing entities
