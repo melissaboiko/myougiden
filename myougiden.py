@@ -4,6 +4,7 @@ import os
 import re
 import sqlite3 as sql
 from termcolor import *
+from glob import glob
 
 DBVERSION = '3'
 
@@ -90,12 +91,42 @@ class Sense():
         self.pos = pos
 
 class DatabaseAccessError(Exception):
+    '''Generic error accessing database.'''
+    pass
+
+class DatabaseMissing(DatabaseAccessError):
+    '''Database not found.'''
+    pass
+class DatabaseWrongVersion(DatabaseAccessError):
+    '''Database is of wrong version.'''
+    pass
+class DatabaseUpdating(DatabaseAccessError):
+    '''Database is currently updating.'''
+    pass
+class DatabaseStaleUpdates(DatabaseAccessError):
+    '''Temporary files left, updating process aborted anormally.'''
     pass
 
 def opendb(case_sensitive=False):
-    '''Open SQL database; returns (con, cur).
+    '''Test and open SQL database; returns (con, cur).
 
-    Raises DatabaseAccessError if database is missing or the wrong version.'''
+    Raises DatabaseAccessError subclass if database can't be used for any
+    reason.'''
+
+    temps = glob(PATHS['database'] + '.new.*')
+    if temps:
+        for temp in temps:
+            m = re.match(PATHS['database'] + '.new.([0-9]*)',
+                         temp)
+            pid = int(m.group(1))
+            try:
+                os.getpgid(pid)
+            except OSError:
+                raise DatabaseStaleUpdates('updatedb-myougiden was interrupted; please run again')
+        raise DatabaseUpdating('updatedb-myougiden is running, please wait a while :)')
+
+    if not os.path.isfile(PATHS['database']):
+        raise DatabaseMissing('Could not find ' + PATHS['database'])
 
     try:
         con = sql.connect(PATHS['database'])
@@ -110,7 +141,7 @@ def opendb(case_sensitive=False):
         raise DatabaseAccessError("Couldn't read database to check version")
 
     if dbversion != DBVERSION:
-        raise DatabaseAccessError('Unkown database version %s' % dbversion)
+        raise DatabaseWrongVersion('Unkown database version %s' % dbversion)
 
     if case_sensitive:
         con.create_function('regexp', 2, regexp_sensitive)

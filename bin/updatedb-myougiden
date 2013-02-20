@@ -210,6 +210,7 @@ def cleanup():
 atexit.register(cleanup)
 
 def sigcleanup(signum, stack):
+    print("Aborting on signal %d." % signum)
     cleanup()
     sys.exit(1)
 
@@ -219,23 +220,26 @@ for sn in (signal.SIGHUP, signal.SIGINT, signal.SIGQUIT, signal.SIGILL,
     signal.signal(sn, sigcleanup)
 
 def nice_self():
+    problem=False
+
     try:
         import psutil
         me = psutil.Process(os.getpid())
         me.set_nice(19)
         me.set_ionice(psutil.IOPRIO_CLASS_IDLE)
-        return True
+
     except ImportError:
         try:
-            # assume all platforms with 'ionice' also have 'nice'
-            os.execvp('ionice', ['ionice', '-c', 'idle', 'nice', '-n', '19']
-                      + sys.argv + ['--no-nice'])
+            subprocess.call(['renice', '-n', '19',  str(os.getpid())])
         except OSError:
-            try:
-                os.execvp('nice', ['nice', '-n', '19']
-                          + sys.argv + ['--no-nice'])
-            except OSError:
-                return False
+            problem=True
+
+        try:
+            subprocess.call(['ionice', '-c', 'idle', str(os.getpid())])
+        except OSError:
+            problem=True
+
+    return problem == False
 
 def create_tables(cur):
     # what about a custom collation function?
@@ -557,6 +561,21 @@ not set, it will be automatically deleted after use.''')
         dirname = os.path.dirname(jmpath)
         if len(dirname) > 0:
             mkdir_p(dirname)
+
+    temps = glob(PATHS['database'] + '.new.*')
+    if temps:
+        for temp in temps:
+            m = re.match(PATHS['database'] + '.new.([0-9]*)', temp)
+            pid = int(m.group(1))
+            try:
+                os.getpgid(pid)
+                # weakness: if another process takes over same PID
+                print("updatedb-myougiden seems to be running at PID %d! Exiting..."
+                        % pid)
+                sys.exit(0)
+            except OSError:
+                print("Removing stale file %s" % temp)
+                os.remove(temp)
 
     if args.fetch:
         print("Fetching %s to %s, please wait..." % (PATHS['jmdict_url'], jmdesc))
