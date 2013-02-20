@@ -278,6 +278,7 @@ def create_tables(cur):
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         pos TEXT DEFAULT NULL,
         FOREIGN KEY (ent_seq) REFERENCES entries(ent_seq)
+        FOREIGN KEY (pos) REFERENCES abbreviations(abbrev)
       );
     ''')
 
@@ -315,33 +316,26 @@ def create_tables(cur):
     ''')
 
 
-def unexpand_pos(cur):
-    '''Unexpand part-of-speech abbreviations.'''
-
-    cur.execute('''
-      SELECT id, pos FROM senses WHERE pos IS NOT NULL;
-      ''')
-
-    for row in cur.fetchall():
-        sense_id = row[0]
-        long_exp = row[1]
-
-        # find abbrev
-        for ab, exp in long_expansions.items():
-            if exp == long_exp:
-                abbrev = ab
-                break
-
-        cur.execute('''
-        UPDATE senses SET pos = ? WHERE id = ?;
-        ''', [abbrev, sense_id])
-
 def make_database(jmdict, sqlite):
     mkdir_p(os.path.dirname(PATHS['database']))
 
     ent_seq = None
     sense_id = None
     cdata = None
+
+    def handle_entity_decl(name,
+            is_parameter_entity,
+            value,
+            base,
+            system_id,
+            public_id,
+            notation_name):
+
+        long_expansions[name] = value
+        cur.execute('''
+          INSERT INTO abbreviations(abbrev, short_expansion, long_expansion)
+                 VALUES (?, ?, ?);
+        ''', [name, short_expansions[name], value])
 
     def handle_start_el(el, attrs):
         nonlocal ent_seq
@@ -377,22 +371,18 @@ def make_database(jmdict, sqlite):
                     [ent_seq, cdata])
 
         elif el == 'pos':
+            for abr, exp in long_expansions.items():
+                if cdata == exp:
+                    abbrev = abr
+                    break
+
             cur.execute('UPDATE senses SET pos = ? WHERE id = ?;',
-                    [cdata, sense_id])
+                    [abbrev, sense_id])
 
         elif el == 'gloss':
             cur.execute('INSERT INTO glosses(sense_id, gloss) VALUES (?, ?);',
                     [sense_id, cdata])
 
-
-    def handle_entity_decl(name,
-            is_parameter_entity,
-            value,
-            base,
-            system_id,
-            public_id,
-            notation_name):
-        long_expansions[name] = value
 
     p = xml.parsers.expat.ParserCreate()
     p.buffer_text = True
@@ -409,11 +399,6 @@ def make_database(jmdict, sqlite):
 
     create_tables(cur)
     p.ParseFile(jmdict)
-    for abbrev, long_expansion in long_expansions.items():
-        cur.execute('''
-          INSERT INTO abbreviations(abbrev, short_expansion, long_expansion)
-                 VALUES (?, ?, ?);
-        ''', [abbrev, short_expansions[abbrev], long_expansion])
 
     cur.close()
     con.commit()
