@@ -6,7 +6,7 @@ import sqlite3 as sql
 from termcolor import *
 from glob import glob
 
-DBVERSION = '3'
+DBVERSION = '4'
 
 PATHS = {}
 
@@ -84,10 +84,12 @@ class Sense():
     '''Attributes:
     - glosses: a list of glosses.
     - pos: part-of-speech.
+    - id: database ID.
     '''
 
-    def __init__(self, glosses=[], pos=None):
-        self.glosses = glosses
+    def __init__(self, id=None, pos=None, glosses=None):
+        self.id = id
+        self.glosses = glosses or list()
         self.pos = pos
 
 class DatabaseAccessError(Exception):
@@ -230,8 +232,12 @@ def colorize_data(kanjis, readings, senses, search_params):
     elif search_params['field'] == 'gloss':
         readings = [fmt(k, 'reading') for k in readings]
         kanjis = [fmt(k, 'kanji') for k in kanjis]
-        senses = [[color_regexp(reg, g) for g in glosses_list]
-                  for glosses_list in senses]
+
+        for sense in senses:
+            sense.glosses = [color_regexp(reg, g) for g in sense.glosses]
+
+    for sense in senses:
+        sense.pos = fmt(sense.pos, 'subdue')
 
     return (kanjis, readings, senses)
 
@@ -245,11 +251,10 @@ def format_entry_tsv(kanjis, readings, senses, search_params, color=False):
         sep_half = fmt(sep_half, 'subdue')
         kanjis, readings, senses = colorize_data(kanjis, readings, senses, search_params)
 
-    return '%s\t%s\t%s' % (
-                sep_full.join(readings),
-                sep_full.join(kanjis),
-                "\t".join([sep_half.join(glosses_list) for glosses_list in senses])
-                )
+    s = "%s\t%s" % (sep_full.join(readings), sep_full.join(kanjis))
+    for sense in senses:
+        s += "\t%s %s" % (sense.pos, sep_half.join(sense.glosses))
+    return s
 
 def format_entry_human(kanjis, readings, senses, search_params, color=True):
     sep_full = '；'
@@ -268,15 +273,12 @@ def format_entry_human(kanjis, readings, senses, search_params, color=True):
         s += "\n"
         s += sep_full.join(kanjis)
 
-    for sensenum, glosses_list in enumerate(senses, start=1):
-        s += "\n "
-
+    for sensenum, sense in enumerate(senses, start=1):
         sn = str(sensenum) + '.'
         if color:
             sn = fmt(sn, 'misc')
-        s += sn + ' '
 
-        s += sep_half.join(glosses_list)
+        s += "\n%s %s %s" % (sn, sense.pos, sep_half.join(sense.glosses))
 
     return s
 
@@ -284,9 +286,9 @@ def format_entry_human(kanjis, readings, senses, search_params, color=True):
 def fetch_entry(cur, ent_seq):
     '''Return tuple of lists (kanjis, readings, senses).'''
 
-    kanjis = []
-    readings = []
-    senses = [] # list of list of glosses
+    kanjis = [] # list of strings
+    readings = [] # list of strings
+    senses = [] # list of Sense objects
 
     cur.execute('SELECT kanji FROM kanjis WHERE ent_seq = ?;', [ent_seq])
     for row in cur.fetchall():
@@ -296,18 +298,21 @@ def fetch_entry(cur, ent_seq):
     for row in cur.fetchall():
         readings.append(row[0])
 
-    sense_ids = []
-    cur.execute('SELECT id FROM senses WHERE ent_seq = ?;', [ent_seq])
+    senses = []
+    cur.execute('SELECT id, pos FROM senses WHERE ent_seq = ?;', [ent_seq])
     for row in cur.fetchall():
-        sense_ids.append(row[0])
-    for sense_id in sense_ids:
-        glosses = []
+        if row[1]:
+            pos = '(%s)' % row[1]
+        else:
+            pos = ''
 
-        cur.execute('SELECT gloss FROM glosses WHERE sense_id = ?;', [sense_id])
+        sense = Sense(id=row[0], pos=pos)
+
+        cur.execute('SELECT gloss FROM glosses WHERE sense_id = ?;', [sense.id])
         for row in cur.fetchall():
-            glosses.append(row[0])
+            sense.glosses.append(row[0])
 
-        senses.append(glosses)
+        senses.append(sense)
 
     return (kanjis, readings, senses)
 
