@@ -36,11 +36,183 @@ import urllib.request
 import sqlite3 as sql
 import xml.parsers.expat
 
+# JMdict expansions are too damn long
+short_expansions = {
+  'Buddh': 'Buddhism',
+  'MA': 'martial arts',
+  'Shinto': 'Shintō',
+  'X': 'rude',
+  'abbr': 'abbreviation',
+  'adj-f': 'misc adnominal',
+  'adj-i': 'verbal adj.',
+  'adj-kari': "‘-kari’ verbal adj.",
+  'adj-ku': "‘-ku’ verbal adj.",
+  'adj-na': 'adjectival noun',
+  'adj-nari': '‘nari’ adjectival noun',
+  'adj-no': "‘no-’ adjectival noun'",
+  'adj-pn': 'adnominal',
+  'adj-shiku': "‘-shiku’ verbal adj.",
+  'adj-t': "‘-taru’ adj.",
+  'adv': 'adverb',
+  'adv-to': "‘-to’ adverb",
+  'anat': 'anatomy',
+  'arch': 'archaism',
+  'archit': 'architecture',
+  'astron': 'astronomy',
+  'ateji': 'phonogram (ateji)',
+  'aux': 'auxiliary',
+  'aux-adj': 'auxiliary adj.',
+  'aux-v': 'auxiliary verb',
+  'baseb': 'baseball',
+  'biol': 'biology',
+  'bot': 'botany',
+  'bus': 'business',
+  'chem': 'chemistry',
+  'chn': "child speech",
+  'col': 'colloquial',
+  'comp': 'computing',
+  'conj': 'conj.',
+  'ctr': 'counter',
+  'derog': 'derogatory',
+  'eK': 'exclusively kanji',
+  'econ': 'economics',
+  'ek': 'exclusively kana',
+  'engr': 'engineering',
+  'exp': 'expression',
+  'fam': 'familiar',
+  'fem': 'women’s speech',
+  'finc': 'finance',
+  'food': 'food',
+  'geol': 'geology',
+  'geom': 'geometry',
+  'gikun': 'logogram (gikun/jukujikun)',
+  'hob': 'Hokkaido-ben',
+  'hon': 'honorific',
+  'hum': 'humble',
+  'iK': 'irregular kanji',
+  'id': 'idiom',
+  'ik': 'irregular kana',
+  'int': 'interjection',
+  'io': 'irregular okurigana',
+  'iv': 'irregular verb',
+  'joc': 'jocular',
+  'ksb': 'Kansai-ben',
+  'ktb': 'Kantō-ben',
+  'kyb': 'Kyōto-ben',
+  'kyu': 'Kyūshū-ben',
+  'law': 'law',
+  'ling': 'linguistics',
+  'm-sl': 'manga speech',
+  'male': 'men’s speech',
+  'male-sl': 'male slang',
+  'math': 'math',
+  'med': 'medicine',
+  'mil': 'military',
+  'music': 'music',
+  'n': 'noun',
+  'n-adv': 'adverbial noun',
+  'n-pr': 'proper noun',
+  'n-pref': 'nominal prefix',
+  'n-suf': 'nominal suffix',
+  'n-t': 'temporal noun',
+  'nab': 'Nagano-ben',
+  'num': 'numeric',
+  'oK': 'outdated kanji',
+  'obs': 'obsolete',
+  'obsc': 'obscure',
+  'oik': 'old/irregular kana',
+  'ok': 'obsolete kana',
+  'on-mim': 'sound-symbolic',
+  'osb': 'Osaka-ben',
+  'physics': 'physics',
+  'pn': 'pronoun',
+  'poet': 'poetry',
+  'pol': 'polite',
+  'pref': 'prefix',
+  'proverb': 'proverb',
+  'prt': 'particle',
+  'rare': 'rare',
+  'rkb': 'Ryūkyū-ben',
+  'sens': 'sensitive',
+  'sl': 'slang',
+  'sports': 'sports',
+  'suf': 'suffix',
+  'sumo': 'sumō',
+  'thb': 'Tōhoku-ben',
+  'tsb': 'Tosa-ben',
+  'tsug': 'Tsugaru-ben',
+  'uK': 'usually in kanji',
+  'uk': 'usually in kana',
+  'v-unspec': 'verb unspecified',
+  'v1': 'ichidan verb',
+  'v2a-s': "-u nidan verb",
+  'v2b-k': "-bu upper nidan verb",
+  'v2b-s': "-bu lower nidan verb",
+  'v2d-k': "-dzu upper nidan verb",
+  'v2d-s': "-dzu lower nidan verb",
+  'v2g-k': "-gu upper nidan verb",
+  'v2g-s': "-gu lower nidan verb",
+  'v2h-k': "-hu/-fu upper nidan verb",
+  'v2h-s': "-hu/-fu lower nidan verb",
+  'v2k-k': "-ku upper nidan verb",
+  'v2k-s': "-ku lower nidan verb",
+  'v2m-k': "-mu upper nidan verb",
+  'v2m-s': "-mu lower nidan verb",
+  'v2n-s': "-nu lower nidan verb",
+  'v2r-k': "-ru upper nidan verb",
+  'v2r-s': "-ru lower nidan verb",
+  'v2s-s': "-su lower nidan verb",
+  'v2t-k': "-tsu upper nidan verb",
+  'v2t-s': "-tsu lower nidan verb",
+  'v2w-s': "-u lower nidan verb",
+  'v2y-k': "-yu upper nidan verb",
+  'v2y-s': "-yu lower nidan verb",
+  'v2z-s': "-zu lower nidan verb",
+  'v4b': "-bu yodan verb",
+  'v4g': "-gu yodan verb",
+  'v4h': "-hu/-fu yodan verb",
+  'v4k': "-ku yodan verb",
+  'v4m': "-mu yodan verb",
+  'v4n': "-nu yodan verb",
+  'v4r': "-ru yodan verb",
+  'v4s': "-su yodan verb",
+  'v4t': "-tsu yodan verb",
+  'v5aru': 'aru godan verb',
+  'v5b': "-bu godan verb",
+  'v5g': "-gu godan verb",
+  'v5k': "-ku godan verb",
+  'v5k-s': 'iku/yuku godan verb',
+  'v5m': "-mu godan verb",
+  'v5n': "-nu godan verb",
+  'v5r': "-ru godan verb",
+  'v5r-i': "-ru irregular godan verb",
+  'v5s': "-su godan verb",
+  'v5t': "-tsu godan verb",
+  'v5u': "-u godan verb",
+  'v5u-s': "-u special godan verb",
+  'v5uru': 'uru godan verb',
+  'vi': 'intrans.',
+  'vk': 'kuru verb',
+  'vn': '-nu irregular verb',
+  'vr': '-ru/-ri irregular verb',
+  'vs': 'verbal noun',
+  'vs-c': 'su verb',
+  'vs-i': 'verbal noun, irregular',
+  'vs-s': 'verbal noun, special',
+  'vt': 'trans.',
+  'vulg': 'vulgar',
+  'vz': '-zuru ichidan verb',
+  'zool': 'zoology'
+}
+
+
 def create_tables(cur):
     # what about a custom collation function?
 
     # my version of sqlite3 doesn't seem to work with executemany()
     cur.execute('DROP TABLE IF EXISTS versions;')
+    cur.execute('DROP TABLE IF EXISTS abbreviations;')
+
     cur.execute('DROP TABLE IF EXISTS kanjis;')
     cur.execute('DROP TABLE IF EXISTS readings;')
     cur.execute('DROP TABLE IF EXISTS senses;')
@@ -52,9 +224,24 @@ def create_tables(cur):
         dbversion TEXT PRIMARY KEY
       );
     ''')
+
     cur.execute('''
       INSERT INTO versions VALUES ( ? );
     ''', [DBVERSION])
+
+
+    # basically what's encoded as entities in JMdict.xml .
+    # notice the entity names are familiar from EDICT files.
+    # abbrev = entity name
+    # long_expansion = entity JMdict value
+    # short_expansion = our own, shorter expansion
+    cur.execute('''
+      CREATE TABLE abbreviations (
+        abbrev TEXT PRIMARY KEY,
+        short_expansion TEXT DEFAULT NULL,
+        long_expansion TEXT DEFAULT NULL
+      );
+    ''')
 
     cur.execute('''
       CREATE TABLE
@@ -126,7 +313,11 @@ def create_tables(cur):
       CREATE INDEX glosses_gloss ON glosses (gloss);
     ''')
 
-
+def insert_entity_abbrev(cur, abbrev, long_expansion):
+    cur.execute('''
+      INSERT INTO abbreviations(abbrev, short_expansion, long_expansion)
+             VALUES (?, ?, ?);
+    ''', [abbrev, short_expansions[abbrev], long_expansion])
 
 def make_database(jmdict, sqlite):
     mkdir_p(os.path.dirname(PATHS['database']))
@@ -177,18 +368,38 @@ def make_database(jmdict, sqlite):
                     [sense_id, cdata])
 
 
+    # there seems to be no easy way of preventing expat from expanding
+    # entities.
+    #
+    # we build an entities table, and later un-expand them.
+    entities={}
+    def handle_entity_decl(name,
+            is_parameter_entity,
+            value,
+            base,
+            system_id,
+            public_id,
+            notation_name):
+        nonlocal entities
+        entities[name] = value
+
     p = xml.parsers.expat.ParserCreate()
+    p.buffer_text = True
     p.StartElementHandler = handle_start_el
     p.EndElementHandler = handle_end_el
     p.CharacterDataHandler = handle_cdata
-    p.SetParamEntityParsing(xml.parsers.expat.XML_PARAM_ENTITY_PARSING_NEVER)
-    p.buffer_text = True
+    p.EntityDeclHandler = handle_entity_decl
+
+    # it does nothing!
+    # p.SetParamEntityParsing(xml.parsers.expat.XML_PARAM_ENTITY_PARSING_NEVER)
 
     con = sql.connect(PATHS['database'], isolation_level='EXCLUSIVE')
     cur = con.cursor()
 
     create_tables(cur)
     p.ParseFile(jmdict)
+    for entity, long_expansion in entities.items():
+        insert_entity_abbrev(cur, entity, long_expansion)
 
     cur.close()
     con.commit()
