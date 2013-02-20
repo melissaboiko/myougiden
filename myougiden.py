@@ -79,6 +79,16 @@ def match_word_insensitive(word, field):
     return reg.search(field) is not None
 
 
+class Sense():
+    '''Attributes:
+    - glosses: a list of glosses.
+    - pos: part-of-speech.
+    '''
+
+    def __init__(self, glosses=[], pos=None):
+        self.glosses = glosses
+        self.pos = pos
+
 class DatabaseAccessError(Exception):
     pass
 
