@@ -27,8 +27,11 @@
      - EDICT style seems reasonable, but it would require changing the
        entry-centric database schema.
 
+   - clean abbreviations that are not being used 
+
 
    - pitch-accent data (from where?)
+
 
  - output:
    - color output:
