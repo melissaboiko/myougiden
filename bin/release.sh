@@ -39,4 +39,5 @@ echo_do sed -i setup.py -e "s/^version=.*/version='$newversion'/"
 echo_do git commit -a -m "releasing $newversion"
 echo_do git tag -u "$key" "$newversion" -m "releasing $newversion"
 echo_do git push
+echo_do git push --tags
 echo_do python3 setup.py sdist upload --sign --identity="$key"
