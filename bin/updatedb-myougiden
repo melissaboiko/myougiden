@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import atexit
 import errno
 import gzip
 import os
@@ -10,6 +11,7 @@ import urllib.request
 import xml.parsers.expat
 
 import sqlite3 as sql
+from glob import glob
 
 try:
     from myougiden import *
@@ -192,8 +194,29 @@ short_expansions = {
 long_expansions={}
 
 # used for progress bar
-done=0
+donecount=0
 todo=None
+
+# rather than using transactions, locks and so on, it was found to be faster to
+# just remove the file. so we create a new database, and move it over the old
+# one on success.
+PATHS['tmpdb'] = "%s.new.%d" % (PATHS['database'], os.getpid())
+
+# if problems are found, we just delete the temp database.
+def cleanup():
+    # sqlite creates "dbname-journal" files
+    for path in glob(PATHS['tmpdb'] + '*'):
+        os.remove(path)
+atexit.register(cleanup)
+
+def sigcleanup(signum, stack):
+    cleanup()
+    sys.exit(1)
+
+for sn in (signal.SIGHUP, signal.SIGINT, signal.SIGQUIT, signal.SIGILL,
+        signal.SIGABRT, signal.SIGFPE, signal.SIGSEGV, signal.SIGPIPE,
+        signal.SIGTERM, signal.SIGBUS):
+    signal.signal(sn, sigcleanup)
 
 def nice_self():
     try:
@@ -353,13 +376,13 @@ c[ ]
 animation_frame = 0
 
 def print_coffee():
-    global done
+    global donecount
     global todo
     global animation_frame
 
     sys.stdout.write(coffee[animation_frame])
     print(" %6d/%d (%2.2f%%)..." %
-            (done, todo, (float(done)/todo)*100))
+            (donecount, todo, (float(donecount)/todo)*100))
 
     sys.stdout.flush()
     animation_frame = (animation_frame+1) % len(coffee)
@@ -377,7 +400,7 @@ def update_coffee(signum=None, frame=None):
 
 def make_database(jmdict, sqlite, progress=True):
     global todo
-    global done
+    global donecount
 
     mkdir_p(os.path.dirname(PATHS['database']))
 
@@ -420,13 +443,13 @@ def make_database(jmdict, sqlite, progress=True):
         nonlocal sense_id
         nonlocal cdata
         nonlocal progress
-        global done
+        global donecount
 
         if el == 'ent_seq':
             ent_seq = cdata
             cur.execute('INSERT INTO entries(ent_seq) VALUES (?);', [ent_seq])
             if progress:
-                done += 1
+                donecount += 1
 
         elif el == 'reb':
             cur.execute('INSERT INTO readings(ent_seq, reading) VALUES (?, ?);',
@@ -460,11 +483,7 @@ def make_database(jmdict, sqlite, progress=True):
     # it does nothing!
     # p.SetParamEntityParsing(xml.parsers.expat.XML_PARAM_ENTITY_PARSING_NEVER)
 
-    # quicker than drop tables
-    if os.path.exists(PATHS['database']):
-        os.remove(PATHS['database'])
-
-    con = sql.connect(PATHS['database'], isolation_level='IMMEDIATE')
+    con = sql.connect(PATHS['tmpdb'], isolation_level='IMMEDIATE')
     cur = con.cursor()
 
     create_tables(cur)
@@ -543,13 +562,15 @@ not set, it will be automatically deleted after use.''')
         print("Fetching %s to %s, please wait..." % (PATHS['jmdict_url'], jmdesc))
         urllib.request.urlretrieve(PATHS['jmdict_url'], jmpath)
 
-    print("Updating database at %s from %s, please wait..." %
-          (PATHS['database'], jmdesc))
+    print("Compiling database from %s, please wait..." % jmdesc)
 
-    progress = sys.output.isatty()
-    make_database(gzip.open(jmpath, 'r'), PATHS['database'], progress=progress)
+    progress = sys.stdout.isatty()
+    make_database(gzip.open(jmpath, 'r'), PATHS['tmpdb'], progress=progress)
 
     if args.fetch and not args.keep:
         print("Deleting %s." % jmdesc)
         os.remove(jmpath)
+
+    os.rename(PATHS['tmpdb'], PATHS['database'])
+    atexit.unregister(cleanup)
     print("All done, myougiden(1) is ready to use!")
