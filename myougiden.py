@@ -237,7 +237,8 @@ def colorize_data(kanjis, readings, senses, search_params):
             sense.glosses = [color_regexp(reg, g) for g in sense.glosses]
 
     for sense in senses:
-        sense.pos = fmt(sense.pos, 'subdue')
+        if sense.pos:
+            sense.pos = fmt(sense.pos, 'subdue')
 
     return (kanjis, readings, senses)
 
@@ -253,7 +254,11 @@ def format_entry_tsv(kanjis, readings, senses, search_params, color=False):
 
     s = "%s\t%s" % (sep_full.join(readings), sep_full.join(kanjis))
     for sense in senses:
-        s += "\t%s %s" % (sense.pos, sep_half.join(sense.glosses))
+        if sense.pos:
+            pos = ' ' + sense.pos
+        else:
+            pos = ''
+        s += "\t%s%s" % (sense.pos, sep_half.join(sense.glosses))
     return s
 
 def format_entry_human(kanjis, readings, senses, search_params, color=True):
@@ -278,7 +283,10 @@ def format_entry_human(kanjis, readings, senses, search_params, color=True):
         if color:
             sn = fmt(sn, 'misc')
 
-        s += "\n%s %s %s" % (sn, sense.pos, sep_half.join(sense.glosses))
+        if sense.pos:
+            s += "\n%s %s %s" % (sn, sense.pos, sep_half.join(sense.glosses))
+        else:
+            s += "\n%s %s" % (sn, sep_half.join(sense.glosses))
 
     return s
 
@@ -304,7 +312,7 @@ def fetch_entry(cur, ent_seq):
         if row[1]:
             pos = '(%s)' % row[1]
         else:
-            pos = ''
+            pos = None
 
         sense = Sense(id=row[0], pos=pos)
 
