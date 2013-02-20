@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-import os
 import errno
-import sys
 import gzip
-import sqlite3 as sql
+import os
+import signal
+import sys
 import tempfile
+import time
 import urllib.request
 import xml.parsers.expat
+
+import sqlite3 as sql
 
 try:
     from myougiden import *
@@ -188,6 +191,10 @@ short_expansions = {
 # used to un-expand entities.
 long_expansions={}
 
+# used for progress bar
+done=0
+todo=None
+
 def nice_self():
     try:
         import psutil
@@ -315,8 +322,63 @@ def create_tables(cur):
       CREATE INDEX glosses_gloss ON glosses (gloss);
     ''')
 
+def count_entries(jmdict):
+    count=0
 
-def make_database(jmdict, sqlite):
+    def handle_end_el(el):
+        nonlocal count
+        if el == 'entry':
+            count += 1
+
+    p = xml.parsers.expat.ParserCreate()
+    p.buffer_text = True
+    p.EndElementHandler = handle_end_el
+    p.ParseFile(jmdict)
+    return count
+
+
+# credits for ascii art: Dan Strychalski
+coffee = []
+coffee.append('''
+ (  
+  )
+c[ ]
+'''.strip("\n"))
+
+coffee.append('''
+   )
+  ( 
+c[ ]
+'''.strip("\n"))
+animation_frame = 0
+
+def print_coffee():
+    global done
+    global todo
+    global animation_frame
+
+    sys.stdout.write(coffee[animation_frame])
+    print(" %6d/%d (%2.2f%%)..." %
+            (done, todo, (float(done)/todo)*100))
+
+    sys.stdout.flush()
+    animation_frame = (animation_frame+1) % len(coffee)
+
+def update_coffee(signum=None, frame=None):
+    '''Handler for SIGALARM.'''
+
+    # move up 3 lines
+    sys.stdout.write('\033[3A')
+    # move to start of line
+    sys.stdout.write("\r")
+    signal.alarm(1)
+
+    print_coffee()
+
+def make_database(jmdict, sqlite, progress=True):
+    global todo
+    global done
+
     mkdir_p(os.path.dirname(PATHS['database']))
 
     ent_seq = None
@@ -357,10 +419,14 @@ def make_database(jmdict, sqlite):
         nonlocal ent_seq
         nonlocal sense_id
         nonlocal cdata
+        nonlocal progress
+        global done
 
         if el == 'ent_seq':
             ent_seq = cdata
             cur.execute('INSERT INTO entries(ent_seq) VALUES (?);', [ent_seq])
+            if progress:
+                done += 1
 
         elif el == 'reb':
             cur.execute('INSERT INTO readings(ent_seq, reading) VALUES (?, ?);',
@@ -394,10 +460,25 @@ def make_database(jmdict, sqlite):
     # it does nothing!
     # p.SetParamEntityParsing(xml.parsers.expat.XML_PARAM_ENTITY_PARSING_NEVER)
 
+    # quicker than drop tables
+    if os.path.exists(PATHS['database']):
+        os.remove(PATHS['database'])
+
     con = sql.connect(PATHS['database'], isolation_level='IMMEDIATE')
     cur = con.cursor()
 
     create_tables(cur)
+
+    if progress:
+        sys.stdout.write("Counting entries...")
+        todo = count_entries(jmdict)
+        jmdict.seek(0)
+        print(" %s to do." % todo)
+
+        print_coffee()
+        signal.signal(signal.SIGALRM, update_coffee)
+        signal.alarm(1)
+
     p.ParseFile(jmdict)
 
     cur.close()
@@ -465,8 +546,10 @@ not set, it will be automatically deleted after use.''')
     print("Updating database at %s from %s, please wait..." %
           (PATHS['database'], jmdesc))
 
-    make_database(gzip.open(jmpath, 'r'), PATHS['database'])
+    progress = sys.output.isatty()
+    make_database(gzip.open(jmpath, 'r'), PATHS['database'], progress=progress)
 
     if args.fetch and not args.keep:
         print("Deleting %s." % jmdesc)
         os.remove(jmpath)
+    print("All done, myougiden(1) is ready to use!")
