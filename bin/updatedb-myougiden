@@ -1,40 +1,18 @@
 #!/usr/bin/env python3
-
 import os
 import errno
 import sys
 import gzip
 import sqlite3 as sql
 import tempfile
+import urllib.request
+import xml.parsers.expat
 
 try:
     from myougiden import *
 except ImportError:
     sys.path.append('.')
     from myougiden import *
-
-def nice_self():
-    try:
-        import psutil
-        me = psutil.Process(os.getpid())
-        me.set_nice(19)
-        me.set_ionice(psutil.IOPRIO_CLASS_IDLE)
-        return True
-    except ImportError:
-        try:
-            # assume all platforms with 'ionice' also have 'nice'
-            os.execvp('ionice', ['ionice', '-c', 'idle', 'nice', '-n', '19']
-                      + sys.argv + ['--no-nice'])
-        except OSError:
-            try:
-                os.execvp('nice', ['nice', '-n', '19']
-                          + sys.argv + ['--no-nice'])
-            except OSError:
-                return False
-
-import urllib.request
-import sqlite3 as sql
-import xml.parsers.expat
 
 # JMdict expansions are too damn long
 short_expansions = {
@@ -205,11 +183,29 @@ short_expansions = {
   'zool': 'zoology'
 }
 
+def nice_self():
+    try:
+        import psutil
+        me = psutil.Process(os.getpid())
+        me.set_nice(19)
+        me.set_ionice(psutil.IOPRIO_CLASS_IDLE)
+        return True
+    except ImportError:
+        try:
+            # assume all platforms with 'ionice' also have 'nice'
+            os.execvp('ionice', ['ionice', '-c', 'idle', 'nice', '-n', '19']
+                      + sys.argv + ['--no-nice'])
+        except OSError:
+            try:
+                os.execvp('nice', ['nice', '-n', '19']
+                          + sys.argv + ['--no-nice'])
+            except OSError:
+                return False
 
 def create_tables(cur):
     # what about a custom collation function?
 
-    # my version of sqlite3 doesn't seem to work with executemany()
+    # I couldn't make executemany() work as I expected. run one by one.
     cur.execute('DROP TABLE IF EXISTS versions;')
     cur.execute('DROP TABLE IF EXISTS abbreviations;')
 
