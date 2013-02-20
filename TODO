@@ -9,7 +9,6 @@
    - misc
    - s_inf
    - 'common' flag
-   - option to print abbreviations
    - other edict fields (which?)
    - pitch-accent data (from where?)
    - add JMdict date (file timestamp, until they add it to the dtd)

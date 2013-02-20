@@ -406,3 +406,28 @@ def guess_search(cur, conditions):
             return (condition, res)
     return (None, [])
 
+def short_expansion(cur, abbrev):
+    cur.execute(''' SELECT short_expansion FROM abbreviations WHERE abbrev = ? ;''', [abbrev])
+    row = cur.fetchone()
+    if row:
+        return row[0]
+    else:
+        return None
+
+def abbrev_line(cur, abbrev, color=True):
+    exp = short_expansion(cur, abbrev)
+    if color:
+        abbrev = fmt(abbrev, 'subdue')
+    return "%s\t%s" % (abbrev, exp)
+
+def abbrevs_table(cur, color=True):
+    cur.execute('''
+    SELECT abbrev
+    FROM abbreviations
+    ORDER BY abbrev
+    ;''')
+
+    abbrevs=[]
+    for row in cur.fetchall():
+        abbrevs.append(row[0])
+    return "\n".join([abbrev_line(cur, abbrev, color) for abbrev in abbrevs])
