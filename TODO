@@ -36,6 +36,7 @@
    - can we make pypi post-uninstall delete database?
    - deb?
    - lock database during update, restore old version if fail
+   - progress bar
 
  - alternative backends?
   - better benchmarks to compare them
