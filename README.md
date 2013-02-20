@@ -11,7 +11,7 @@ Features:
  - Option for tab-separated output, easily manipulable with Unix tools.
 
 myougiden saves EDICT data in sqlite3 format. This costs some
-disk space (currently about 50MiB), but with indexes, it seems to
+disk space (currently about 51MiB), but with indexes, it seems to
 be quite fast.
 
 Sample usage
