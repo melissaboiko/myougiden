@@ -6,7 +6,9 @@
    - whole-word for Japanese (feasible?)
 
  - data:
-   - part-of-speech
+   - pos
+   - misc
+   - s_inf
    - 'common' flag
    - other edict fields (which?)
    - pitch-accent data (from where?)
