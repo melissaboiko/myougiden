@@ -183,6 +183,11 @@ short_expansions = {
   'zool': 'zoology'
 }
 
+# updated directly from JMdict entities.
+#
+# used to un-expand entities.
+long_expansions={}
+
 def nice_self():
     try:
         import psutil
@@ -309,11 +314,27 @@ def create_tables(cur):
       CREATE INDEX glosses_gloss ON glosses (gloss);
     ''')
 
-def insert_entity_abbrev(cur, abbrev, long_expansion):
+
+def unexpand_pos(cur):
+    '''Unexpand part-of-speech abbreviations.'''
+
     cur.execute('''
-      INSERT INTO abbreviations(abbrev, short_expansion, long_expansion)
-             VALUES (?, ?, ?);
-    ''', [abbrev, short_expansions[abbrev], long_expansion])
+      SELECT id, pos FROM senses WHERE pos IS NOT NULL;
+      ''')
+
+    for row in cur.fetchall():
+        sense_id = row[0]
+        long_exp = row[1]
+
+        # find abbrev
+        for ab, exp in long_expansions.items():
+            if exp == long_exp:
+                abbrev = ab
+                break
+
+        cur.execute('''
+        UPDATE senses SET pos = ? WHERE id = ?;
+        ''', [abbrev, sense_id])
 
 def make_database(jmdict, sqlite):
     mkdir_p(os.path.dirname(PATHS['database']))
@@ -364,11 +385,6 @@ def make_database(jmdict, sqlite):
                     [sense_id, cdata])
 
 
-    # there seems to be no easy way of preventing expat from expanding
-    # entities.
-    #
-    # we build an entities table, and later un-expand them.
-    entities={}
     def handle_entity_decl(name,
             is_parameter_entity,
             value,
@@ -376,8 +392,7 @@ def make_database(jmdict, sqlite):
             system_id,
             public_id,
             notation_name):
-        nonlocal entities
-        entities[name] = value
+        long_expansions[name] = value
 
     p = xml.parsers.expat.ParserCreate()
     p.buffer_text = True
@@ -389,13 +404,16 @@ def make_database(jmdict, sqlite):
     # it does nothing!
     # p.SetParamEntityParsing(xml.parsers.expat.XML_PARAM_ENTITY_PARSING_NEVER)
 
-    con = sql.connect(PATHS['database'], isolation_level='EXCLUSIVE')
+    con = sql.connect(PATHS['database'], isolation_level='IMMEDIATE')
     cur = con.cursor()
 
     create_tables(cur)
     p.ParseFile(jmdict)
-    for entity, long_expansion in entities.items():
-        insert_entity_abbrev(cur, entity, long_expansion)
+    for abbrev, long_expansion in long_expansions.items():
+        cur.execute('''
+          INSERT INTO abbreviations(abbrev, short_expansion, long_expansion)
+                 VALUES (?, ?, ?);
+        ''', [abbrev, short_expansions[abbrev], long_expansion])
 
     cur.close()
     con.commit()
