@@ -5,7 +5,7 @@ import re
 import sqlite3 as sql
 from termcolor import *
 
-DBVERSION = '1'
+DBVERSION = '3'
 
 PATHS = {}
 

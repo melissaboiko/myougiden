@@ -34,8 +34,7 @@ def nice_self():
 
 import urllib.request
 import sqlite3 as sql
-# import lxml.etree as ET
-import xml.etree.cElementTree as ET
+import xml.parsers.expat
 
 def create_tables(cur):
     # what about a custom collation function?
@@ -89,6 +88,7 @@ def create_tables(cur):
       senses (
         ent_seq INTEGER NOT NULL,
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        pos TEXT DEFAULT NULL,
         FOREIGN KEY (ent_seq) REFERENCES entries(ent_seq)
       );
     ''')
@@ -127,61 +127,72 @@ def create_tables(cur):
     ''')
 
 
-# cur, int,
-# [kanjistr, kanjistr...],
-# [readingstr, readingstr...],
-# [[gloss1a, gloss1b...], [gloss2a, gloss2b...]]
-def insert_entry(cur, ent_seq, kanjis, readings, senses):
-    cur.execute('INSERT INTO entries(ent_seq) VALUES (?);', [ent_seq])
-    for kanji in kanjis:
-        cur.execute('INSERT INTO kanjis(ent_seq, kanji) VALUES (?, ?);', [ent_seq, kanji])
-
-    for reading in readings:
-        cur.execute('INSERT INTO readings(ent_seq, reading) VALUES (?, ?);', [ent_seq, reading])
-
-    for sense in senses:
-        cur.execute('INSERT INTO senses(ent_seq) VALUES (?);', [ent_seq])
-        cur.execute('SELECT max(id) FROM senses;')
-        sense_id = cur.fetchone()[0]
-
-        for gloss in sense:
-            cur.execute('INSERT INTO glosses(sense_id, gloss) VALUES (?, ?);',
-                        [sense_id, gloss])
-
 
 def make_database(jmdict, sqlite):
     mkdir_p(os.path.dirname(PATHS['database']))
 
-    con = sql.connect(PATHS['database'])
+    ent_seq = None
+    sense_id = None
+    cdata = None
+
+    def handle_start_el(el, attrs):
+        nonlocal ent_seq
+        nonlocal sense_id
+        nonlocal cdata
+
+        cdata = ''
+
+        if el == 'sense':
+            cur.execute('INSERT INTO senses(ent_seq) VALUES (?);', [ent_seq])
+            cur.execute('SELECT max(id) FROM senses;')
+            sense_id = cur.fetchone()[0]
+
+    def handle_cdata(data):
+        nonlocal cdata
+        cdata += data
+
+    def handle_end_el(el):
+        nonlocal ent_seq
+        nonlocal sense_id
+        nonlocal cdata
+
+        if el == 'ent_seq':
+            ent_seq = cdata
+            cur.execute('INSERT INTO entries(ent_seq) VALUES (?);', [ent_seq])
+
+        elif el == 'reb':
+            cur.execute('INSERT INTO readings(ent_seq, reading) VALUES (?, ?);',
+                    [ent_seq, cdata])
+
+        elif el == 'keb':
+            cur.execute('INSERT INTO kanjis(ent_seq, kanji) VALUES (?, ?);',
+                    [ent_seq, cdata])
+
+        elif el == 'pos':
+            cur.execute('UPDATE senses SET pos = ? WHERE id = ?;',
+                    [cdata, sense_id])
+
+        elif el == 'gloss':
+            cur.execute('INSERT INTO glosses(sense_id, gloss) VALUES (?, ?);',
+                    [sense_id, cdata])
+
+
+    p = xml.parsers.expat.ParserCreate()
+    p.StartElementHandler = handle_start_el
+    p.EndElementHandler = handle_end_el
+    p.CharacterDataHandler = handle_cdata
+    p.SetParamEntityParsing(xml.parsers.expat.XML_PARAM_ENTITY_PARSING_NEVER)
+    p.buffer_text = True
+
+    con = sql.connect(PATHS['database'], isolation_level='EXCLUSIVE')
     cur = con.cursor()
 
-    tree = ET.parse(jmdict)
-
     create_tables(cur)
-
-    for entry in tree.findall('entry'):
-        ent_seq = entry.find('ent_seq').text
-
-        kanjis = []
-        for kanji in entry.findall('k_ele'):
-            kanjis.append(kanji.find('keb').text)
-
-        readings = []
-        for reading in entry.findall('r_ele'):
-            readings.append(reading.find('reb').text)
-
-        senses = []
-        for sense in entry.findall('sense'):
-
-            glosses = []
-            for gloss in sense.findall('gloss'):
-                glosses.append(gloss.text)
-            senses.append(glosses)
-
-        insert_entry(cur, ent_seq, kanjis, readings, senses)
+    p.ParseFile(jmdict)
 
     cur.close()
     con.commit()
+    con.close()
 
 
 if __name__ == '__main__':
