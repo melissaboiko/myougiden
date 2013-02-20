@@ -13,6 +13,25 @@ except ImportError:
     sys.path.append('.')
     from myougiden import *
 
+def nice_self():
+    try:
+        import psutil
+        me = psutil.Process(os.getpid())
+        me.set_nice(19)
+        me.set_ionice(psutil.IOPRIO_CLASS_IDLE)
+        return True
+    except ImportError:
+        try:
+            # assume all platforms with 'ionice' also have 'nice'
+            os.execvp('ionice', ['ionice', '-c', 'idle', 'nice', '-n', '19']
+                      + sys.argv + ['--no-nice'])
+        except OSError:
+            try:
+                os.execvp('nice', ['nice', '-n', '19']
+                          + sys.argv + ['--no-nice'])
+            except OSError:
+                return False
+
 import urllib.request
 import sqlite3 as sql
 # import lxml.etree as ET
@@ -182,8 +201,14 @@ not set, it will be automatically deleted after use.''')
                     metavar='PATH',
                     help='''Path of local JMdict_e.gz file. Default:
 %(default)s .''')
+
+    ap.add_argument('--no-nice', action='store_false', dest='nice',
+            help='''Don't lower process priority (default: try to be nice).''')
+
     args = ap.parse_args()
 
+    if args.nice:
+        nice_self()
 
     localjm_exists = os.path.isfile(args.jmdict)
 
