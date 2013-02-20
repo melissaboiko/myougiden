@@ -192,8 +192,8 @@ Before using myougiden for the first time, you need to compile the JMdict
 
 It will take a while, but lookups afterwards will be fast.
 
-JMdict is frequently updated.  If you want to keep up with new entries,
-you might like to add that command to cron (for example, in
+JMdict is frequently updated.  If you'd like to keep up with new entries,
+you might want to add the update command to cron (for example, in
 /etc/cron.weekly/myougiden ).'''
     % (str(e), DBVERSION, PATHS['database']))
 

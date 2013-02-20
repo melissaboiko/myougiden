@@ -143,7 +143,7 @@ def opendb(case_sensitive=False):
         raise DatabaseAccessError("Couldn't read database to check version")
 
     if dbversion != DBVERSION:
-        raise DatabaseWrongVersion('Unkown database version %s' % dbversion)
+        raise DatabaseWrongVersion('Incorrect database version: %s' % dbversion)
 
     if case_sensitive:
         con.create_function('regexp', 2, regexp_sensitive)
