@@ -12,6 +12,8 @@
    - 'common' flag
    - other edict fields (which?)
    - pitch-accent data (from where?)
+   - add JMdict date (file timestamp, until they add it to the dtd)
+   - better handling of keb/reb relationships
 
  - output:
    - color output:
