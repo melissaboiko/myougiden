@@ -593,4 +593,4 @@ not set, it will be automatically deleted after use.''')
 
     os.rename(PATHS['tmpdb'], PATHS['database'])
     atexit.unregister(cleanup)
-    print("All done, myougiden(1) is ready to use!")
+    print("All done, myougiden is ready to use!")
