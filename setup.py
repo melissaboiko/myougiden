@@ -22,6 +22,7 @@ setup(name='myougiden',
       scripts=['bin/myougiden', 'bin/updatedb-myougiden'],
       license='GPLv3',
       install_requires=[
+          'romkan',
           'termcolor',
           ],
       classifiers=[

@@ -79,6 +79,8 @@ ag.add_argument('--color', choices=('yes', 'no', 'auto'), default='auto',
 colorize if writing to a terminal.''')
 ag.add_argument('-c', action='store_const', const='yes', dest='color',
                 help='Equivalent to --color=yes')
+ag.add_argument('--out-romaji', '--or', action='store_true',
+                help='Convert kana to romaji in output.')
 
 ag = ap.add_argument_group('Abbreviations help')
 ag.add_argument('--list-abbrevs', action='store_true',
@@ -231,10 +233,18 @@ chosen_search, entries = guess_search(cur, conditions)
 if chosen_search:
     if args.output_mode == 'human':
         rows = [fetch_entry(cur, ent_seq) for ent_seq in entries]
-        print("\n\n".join([format_entry_human(*row, search_params=chosen_search, color=args.color) for row in rows]))
+        print("\n\n".join([
+            format_entry_human(*row,
+                               search_params=chosen_search,
+                               color=args.color,
+                               romaji=args.out_romaji)
+            for row in rows]))
 
     elif args.output_mode == 'tab':
         for row in [fetch_entry(cur, ent_seq) for ent_seq in entries]:
-            print(format_entry_tsv(*row, search_params=chosen_search, color=args.color))
+            print(format_entry_tsv(*row,
+                                   search_params=chosen_search,
+                                   color=args.color,
+                                   romaji=args.out_romaji))
 else:
     sys.exit(1)

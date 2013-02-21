@@ -3,6 +3,8 @@ import sys
 import os
 import re
 import sqlite3 as sql
+import romkan
+
 from termcolor import *
 from glob import glob
 
@@ -245,7 +247,10 @@ def colorize_data(kanjis, readings, senses, search_params):
     return (kanjis, readings, senses)
 
 # this thing really needs to be better thought of
-def format_entry_tsv(kanjis, readings, senses, is_frequent, search_params, color=False):
+def format_entry_tsv(kanjis, readings, senses, is_frequent,
+                     search_params,
+                     color=False,
+                     romaji=False):
     # as of 2012-02-21, no reading or kanji field uses full-width semicolon
     sep_full = '；'
 
@@ -261,6 +266,9 @@ def format_entry_tsv(kanjis, readings, senses, is_frequent, search_params, color
 
     if is_frequent:
         freqmark = '(P)'
+
+    if romaji:
+        readings = [romkan.to_hepburn(r) for r in readings]
 
     if color:
         sep_full = fmt(sep_full, 'subdue')
@@ -284,12 +292,18 @@ def format_entry_tsv(kanjis, readings, senses, is_frequent, search_params, color
 
     return s
 
-def format_entry_human(kanjis, readings, senses, is_frequent, search_params, color=True):
+def format_entry_human(kanjis, readings, senses, is_frequent,
+                       search_params,
+                       color=True,
+                       romaji=False):
     sep_full = '；'
     sep_half = '; '
 
     if is_frequent:
         freqmark = '※'
+
+    if romaji:
+        readings = [romkan.to_hepburn(r) for r in readings]
 
     if color:
         sep_full = fmt(sep_full, 'subdue')
