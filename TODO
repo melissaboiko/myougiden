@@ -4,9 +4,6 @@
    - whole-word for Japanese (feasible?)
 
  - data:
-   - sense:
-     - s_inf
-
    - more JMdict fields?
      - reproduce everything in EDICT at the very least.
 

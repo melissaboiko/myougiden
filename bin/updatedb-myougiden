@@ -318,6 +318,7 @@ def create_tables(cur):
         pos TEXT DEFAULT NULL,
         misc TEXT DEFAULT NULL,
         dial TEXT DEFAULT NULL,
+        s_inf TEXT DEFAULT NULL,
         FOREIGN KEY (ent_seq) REFERENCES entries(ent_seq)
         FOREIGN KEY (pos) REFERENCES abbreviations(abbrev)
         FOREIGN KEY (misc) REFERENCES abbreviations(abbrev)
@@ -484,6 +485,11 @@ def make_database(jmdict, sqlite, progress=True):
 
             cur.execute('UPDATE senses SET %s = ? WHERE id = ?;' % el,
                     [abbrev, sense_id])
+
+        elif el == 's_inf':
+            cur.execute('UPDATE senses SET s_inf = ? WHERE id = ?;',
+                        [cdata, sense_id])
+
 
         elif el == 'gloss':
             cur.execute('INSERT INTO glosses(sense_id, gloss) VALUES (?, ?);',
