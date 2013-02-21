@@ -171,11 +171,12 @@ class Sense():
     def tagstr(self, color=False):
         '''Return a string with all information tags.'''
 
-        tagstr = ''
+        tags = []
         for attr in ('pos', 'misc', 'dial'):
             tag = getattr(self, attr)
             if tag:
-                tagstr += '(' + tag + ')'
+                tags.append(tag)
+        tagstr = '[%s]' % (','.join(tags))
         if color:
             return fmt(tagstr, 'subdue')
         else:
