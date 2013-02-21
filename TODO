@@ -1,6 +1,4 @@
  - query types:
-   - romaji input
-     - and support in guess
    - inflection!
      - and guess
    - whole-word for Japanese (feasible?)
@@ -36,8 +34,8 @@
  - output:
    - color output:
      - light background mode
-   - romaji output
-     - hep and kun
+   - romaji output:
+     - kunrei
    - better wrapping for "human" output
    - auto-pager
    - tsv output:

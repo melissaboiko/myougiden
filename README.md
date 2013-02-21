@@ -4,8 +4,10 @@ venerable collaborative project.  It's currently functional, but
 bare-bones.
 
 Features:
+ - Fully Unicode-aware.
  - Regular expression support.
  - Partial, full, and whole-word queries.
+ - Optional rōmaji input and output.
  - Intelligently find out what kind of query is intended.
  - Full color output, highlighting matches.
  - Option for tab-separated output, easily manipulable with Unix tools.
@@ -17,13 +19,16 @@ be quite fast.
 Sample usage
 ============
 
-Some examples:
+Some example queries:
 
     $ myougiden -h             # long help
     $ myougiden "tea ceremony" # guess what to query
     $ myougiden 茶             # ibid
     $ myougiden -p 茶          # include partial matches
-    $ myougiden -x -t '茶.'    # regexp search; tab-separated, one-line output
+    $ myougiden -p -t 茶       # ...and tab-separated, single-line output
+    $ myougiden -x '茶.'       # regexp search
+    $ myougiden sakura         # if no match is found, treat as rōmaji
+    $ myougiden -r kanji       # forces rōmaji
 
 Installation
 ============

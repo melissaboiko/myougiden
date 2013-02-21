@@ -19,17 +19,62 @@ PATHS['jmdict_url'] = 'http://ftp.monash.edu.au/pub/nihongo/JMdict_e.gz'
 
 # extracted from edict "reading" fields. TODO: cross-check with Unicode
 edict_kana='・？ヽヾゝゞー〜ぁあぃいうぇえおかがきぎくぐけげこごさざしじすずせぜそぞただちっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろわゐゑをんァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヰヱヲンヴヶ'
-edict_kana_regexp=re.compile("^[%s]*$" % edict_kana)
+edict_kana_regexp=re.compile("^[%s]+$" % edict_kana)
 def is_kana(string):
-    return re.match(edict_kana_regexp, string) is not None
+    return edict_kana_regexp.match(string) is not None
 
-def has_alpha(string):
-    return re.search('[a-z]', string, re.I) is not None
+latin_regexp=re.compile(r'^[\]\-'
+                       + r' !"#$%&()*+,./:;<=>?@\\^_`{}|~‘’“”'
+                       + "'"
+                       + 'a-zA-Z0-9'
+                       + ']+$')
+def is_latin(string):
+    return latin_regexp.match(string) is not None
+
+romaji_regexp=re.compile(r'^[\]\-'
+                         + r' !"#$%&()*+,./:;<=>?@\\^_`{}|~‘’“”'
+                         + "'"
+                         + 'a-zA-Z0-9'
+                         + 'āēīōūĀĒĪŌŪâêîôûÂÊÎÔÛ'
+                         + ']+$')
+def is_romaji(string):
+    return romaji_regexp.match(string) is not None
 
 def has_regexp_special(string):
-    '''True if string has characters of regular expressions.'''
+    '''True if string has special characters of regular expressions.'''
     special = re.compile('[%s]' % re.escape(r'.^$*+?{}()[]\|'))
     return special.search(string)
+
+romaji_expansions = {
+    'ā': 'aa',
+    'â': 'aa',
+    'ī': 'ii',
+    'î': 'ii',
+    'ū': 'uu',
+    'û': 'uu',
+}
+romaji_expansions_o = [{'ō': 'ou', 'ô': 'ou'},
+                       {'ō': 'oo', 'ô': 'oo'}]
+romaji_expansions_e = [{'ē': 'ei', 'ê': 'ei'},
+                       {'ē': 'ee', 'ê': 'ee'}]
+
+def expand_romaji(string):
+    '''kā -> [kaa] ; kāmyō -> [kaamyou, kaamyoo] '''
+
+    for char, rep in romaji_expansions.items():
+        string = string.replace(char, rep)
+
+    variations = []
+    for o in romaji_expansions_o:
+        for e in romaji_expansions_e:
+            var = string[:]
+            for char, rep in o.items():
+                var = var.replace(char, rep)
+            for char, rep in e.items():
+                var = var.replace(char, rep)
+            if var not in variations:
+                variations.append(var)
+    return variations
 
 
 # from http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python

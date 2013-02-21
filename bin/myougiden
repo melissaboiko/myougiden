@@ -18,7 +18,7 @@ ag.add_argument('-k', '--kanji', action='store_const', dest='field', const='kanj
                 help='''Return entries matching query on kanji.''')
 
 ag.add_argument('-r', '--reading', action='store_const', dest='field', const='reading',
-                help='''Return entries matching query on reading (in kana).''')
+                help='''Return entries matching query on reading (in kana or rōmaji).''')
 
 ag.add_argument('-g', '--gloss', '--meaning', action='store_const', dest='field', const='gloss',
                 help='''Return entries matching query on glosses (English
@@ -80,7 +80,7 @@ colorize if writing to a terminal.''')
 ag.add_argument('-c', action='store_const', const='yes', dest='color',
                 help='Equivalent to --color=yes')
 ag.add_argument('--out-romaji', '--or', action='store_true',
-                help='Convert kana to romaji in output.')
+                help='Convert kana to rōmaji in output.')
 
 ag = ap.add_argument_group('Abbreviations help')
 ag.add_argument('--list-abbrevs', action='store_true',
@@ -174,17 +174,19 @@ for k in list(search_args.keys()):
 # for code clarity, we always use a list of search conditions,
 # even if the size of the list is 1.
 
-if args.field != 'auto':
-    fields = (args.field,)
-else:
-    if has_alpha(args.query):
-        # alphabet probably means English; smarter order to
-        # search.
-        fields = ('gloss', 'kanji', 'reading')
+if args.field == 'auto':
+    if is_latin(args.query):
+        # if pure alphabet, try as English first, then as rōmaji
+        fields = ('gloss', 'reading', 'kanji')
+    elif is_romaji(args.query):
+        # latin with special chars; probably rōmaji
+        fields = ('reading', 'gloss', 'kanji')
     elif is_kana(args.query):
         fields = ('reading', 'kanji', 'gloss')
     else:
         fields = ('kanji', 'reading', 'gloss')
+else:
+    fields = (args.field,)
 
 if args.extent != 'auto':
     extents = (args.extent,)
@@ -226,6 +228,29 @@ for regexp in regexp_flags:
             sa['regexp'] = regexp
 
             conditions.append(sa)
+
+# deal with rōmaji queries
+if (args.field in ('auto', 'reading') and is_romaji(args.query)):
+
+    if re.search('[A-Z]', args.query):
+        kana_guess=(romkan.to_katakana, romkan.to_hiragana)
+    else:
+        kana_guess=(romkan.to_hiragana, romkan.to_katakana)
+
+    new_conditions = conditions[:]
+    for oldcond in conditions:
+        if oldcond['field'] == 'reading':
+            for kanafn in kana_guess:
+                # the query looks like romaji and the field is reading.
+                # so we try it converted to kana _first_, then try as-is.
+                # thus the insert.
+
+                for romaji in expand_romaji(oldcond['query']):
+                    newcond = oldcond.copy()
+                    newcond['query'] = kanafn(romaji)
+                    new_conditions.insert(new_conditions.index(oldcond),
+                                          newcond)
+    conditions = new_conditions
 
 
 chosen_search, entries = guess_search(cur, conditions)
