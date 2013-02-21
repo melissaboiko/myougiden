@@ -8,10 +8,12 @@
      - misc
      - s_inf
      - dial
+
    - more JMdict fields?
      - reproduce everything in EDICT at the very least.
 
    - add JMdict date (file timestamp, until they add it to the dtd)
+
    - clean abbreviations that are not being used
 
    - don't be entry-centric
@@ -30,26 +32,25 @@
 
    - pitch-accent data (from where?)
 
+   - use datafile to store version, paths etc.
 
  - output:
    - color output:
      - light background mode
    - better wrapping for "human" output
    - auto-pager
-   - tsv output:
-     - document
-     - is this way the best of represeting senses/glosses?
 
  - better documentation
+   - tsv output
+   - manpage?
 
- - config file
+ - config file support?
    - option --saveconf
 
  - improve install script/distutils/updatedb
    - smarter handling of dev vs. installed environments
    - can we make pypi post-uninstall delete database?
    - deb?
-   - "lock" database during update
 
  - alternative backends?
   - better benchmarks to compare them
@@ -57,6 +58,3 @@
   - backend: EDICT2 with grep
   - backend: some NoSQL thing?
   - backend: some kind of "full-text search" thing?
-
- - expat parser:
-   - is still parsing entities
