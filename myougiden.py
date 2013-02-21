@@ -8,7 +8,7 @@ import romkan
 from termcolor import *
 from glob import glob
 
-DBVERSION = '5'
+DBVERSION = '6'
 
 PATHS = {}
 
@@ -131,13 +131,37 @@ class Sense():
     '''Attributes:
     - glosses: a list of glosses.
     - pos: part-of-speech.
+    - misc: other info.
+    - dial: dialect.
     - id: database ID.
     '''
 
-    def __init__(self, id=None, pos=None, glosses=None):
+    def __init__(self,
+                 id=None,
+                 pos=None,
+                 misc=None,
+                 dial=None,
+                 glosses=None):
         self.id = id
-        self.glosses = glosses or list()
         self.pos = pos
+        self.misc = misc
+        self.dial = dial
+        self.glosses = glosses or list()
+
+        self.color=False
+
+    def tagstr(self, color=False):
+        '''Return a string with all information tags.'''
+
+        tagstr = ''
+        for attr in ('pos', 'misc', 'dial'):
+            tag = getattr(self, attr)
+            if tag:
+                tagstr += '(' + tag + ')'
+        if color:
+            return fmt(tagstr, 'subdue')
+        else:
+            return tagstr
 
 class DatabaseAccessError(Exception):
     '''Generic error accessing database.'''
@@ -285,10 +309,6 @@ def colorize_data(kanjis, readings, senses, search_params):
         for sense in senses:
             sense.glosses = [color_regexp(reg, g) for g in sense.glosses]
 
-    for sense in senses:
-        if sense.pos:
-            sense.pos = fmt(sense.pos, 'subdue')
-
     return (kanjis, readings, senses)
 
 # this thing really needs to be better thought of
@@ -326,11 +346,10 @@ def format_entry_tsv(kanjis, readings, senses, is_frequent,
 
     s += "%s\t%s" % (sep_full.join(readings), sep_full.join(kanjis))
     for sense in senses:
-        if sense.pos:
-            pos = ' ' + sense.pos + ' '
-        else:
-            pos = ''
-        s += "\t%s%s" % (pos, sep_half.join(sense.glosses))
+        tagstr = sense.tagstr(color=color)
+        if tagstr: tagstr += ' '
+
+        s += "\t%s%s" % (tagstr, sep_half.join(sense.glosses))
 
     if is_frequent:
         s += ' '  + freqmark
@@ -374,10 +393,10 @@ def format_entry_human(kanjis, readings, senses, is_frequent,
         if color:
             sn = fmt(sn, 'misc')
 
-        if sense.pos:
-            s += "\n%s %s %s" % (sn, sense.pos, sep_half.join(sense.glosses))
-        else:
-            s += "\n%s %s" % (sn, sep_half.join(sense.glosses))
+        tagstr = sense.tagstr(color=color)
+        if tagstr: tagstr += ' '
+
+        s += "\n%s %s%s" % (sn, tagstr, sep_half.join(sense.glosses))
 
     return s
 
@@ -404,14 +423,12 @@ def fetch_entry(cur, ent_seq):
         readings.append(row[0])
 
     senses = []
-    cur.execute('SELECT id, pos FROM senses WHERE ent_seq = ?;', [ent_seq])
+    cur.execute(
+        'SELECT id, pos, misc, dial FROM senses WHERE ent_seq = ?;',
+        [ent_seq]
+    )
     for row in cur.fetchall():
-        if row[1]:
-            pos = '(%s)' % row[1]
-        else:
-            pos = None
-
-        sense = Sense(id=row[0], pos=pos)
+        sense = Sense(id=row[0], pos=row[1], misc=row[2], dial=row[3])
 
         cur.execute('SELECT gloss FROM glosses WHERE sense_id = ?;', [sense.id])
         for row in cur.fetchall():

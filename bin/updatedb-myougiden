@@ -316,8 +316,12 @@ def create_tables(cur):
         ent_seq INTEGER NOT NULL,
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         pos TEXT DEFAULT NULL,
+        misc TEXT DEFAULT NULL,
+        dial TEXT DEFAULT NULL,
         FOREIGN KEY (ent_seq) REFERENCES entries(ent_seq)
         FOREIGN KEY (pos) REFERENCES abbreviations(abbrev)
+        FOREIGN KEY (misc) REFERENCES abbreviations(abbrev)
+        FOREIGN KEY (dial) REFERENCES abbreviations(abbrev)
       );
     ''')
 
@@ -472,13 +476,13 @@ def make_database(jmdict, sqlite, progress=True):
             if cdata in ('news1', 'ichi1', 'spec1', 'gai1'):
                 cur.execute('UPDATE entries SET frequent = 1 WHERE ent_seq = ?;', [ent_seq])
 
-        elif el == 'pos':
+        elif el in ('pos', 'misc', 'dial'):
             for abr, exp in long_expansions.items():
                 if cdata == exp:
                     abbrev = abr
                     break
 
-            cur.execute('UPDATE senses SET pos = ? WHERE id = ?;',
+            cur.execute('UPDATE senses SET %s = ? WHERE id = ?;' % el,
                     [abbrev, sense_id])
 
         elif el == 'gloss':
