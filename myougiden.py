@@ -246,8 +246,18 @@ def colorize_data(kanjis, readings, senses, search_params):
 
 # this thing really needs to be better thought of
 def format_entry_tsv(kanjis, readings, senses, is_frequent, search_params, color=False):
+    # as of 2012-02-21, no reading or kanji field uses full-width semicolon
     sep_full = '；'
-    sep_half = '; '
+
+    # as of 2012-02-21, only one entry uses '|' .
+    # and it's "C|NET", which should be "CNET" anyway.
+    sep_half = '|'
+
+    # escape separator
+    for sense in senses:
+        for idx, gloss in enumerate(sense.glosses):
+            # I am unreasonably proud of this solution.
+            sense.glosses[idx] = sense.glosses[idx].replace(sep_half, '¦')
 
     if is_frequent:
         freqmark = '(P)'
