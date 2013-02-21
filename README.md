@@ -90,6 +90,7 @@ Installing from sources
 
 Required python packages (available on pip):
 
+ - romkan
  - termcolor
  - argparse (only for Python ≤ 3.1)
 
