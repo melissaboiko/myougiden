@@ -295,7 +295,7 @@ def colorize_data(kanjis, readings, senses, search_params):
 def format_entry_tsv(kanjis, readings, senses, is_frequent,
                      search_params,
                      color=False,
-                     romaji=False):
+                     romajifn=None):
     # as of 2012-02-21, no reading or kanji field uses full-width semicolon
     sep_full = '；'
 
@@ -313,7 +313,7 @@ def format_entry_tsv(kanjis, readings, senses, is_frequent,
         freqmark = '(P)'
 
     if romaji:
-        readings = [romkan.to_hepburn(r) for r in readings]
+        readings = [romaji(r) for r in readings]
 
     if color:
         sep_full = fmt(sep_full, 'subdue')
@@ -340,7 +340,7 @@ def format_entry_tsv(kanjis, readings, senses, is_frequent,
 def format_entry_human(kanjis, readings, senses, is_frequent,
                        search_params,
                        color=True,
-                       romaji=False):
+                       romajifn=None):
     sep_full = '；'
     sep_half = '; '
 
@@ -348,7 +348,7 @@ def format_entry_human(kanjis, readings, senses, is_frequent,
         freqmark = '※'
 
     if romaji:
-        readings = [romkan.to_hepburn(r) for r in readings]
+        readings = [romaji(r) for r in readings]
 
     if color:
         sep_full = fmt(sep_full, 'subdue')

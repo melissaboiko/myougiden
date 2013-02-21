@@ -79,8 +79,15 @@ ag.add_argument('--color', choices=('yes', 'no', 'auto'), default='auto',
 colorize if writing to a terminal.''')
 ag.add_argument('-c', action='store_const', const='yes', dest='color',
                 help='Equivalent to --color=yes')
-ag.add_argument('--out-romaji', '--or', action='store_true',
-                help='Convert kana to rōmaji in output.')
+
+ag.add_argument('--out-hepburn', '--oh',
+                action='store_const', const=romkan.to_hepburn,
+                dest='out_romaji', default=None,
+                help='Convert reading to Hepburn rōmaji in output.')
+ag.add_argument('--out-kunrei', '--ok',
+                action='store_const', const=romkan.to_kunrei,
+                dest='out_romaji', default=None,
+                help='Convert reading to Kunrei rōmaji in output.')
 
 ag = ap.add_argument_group('Abbreviations help')
 ag.add_argument('--list-abbrevs', action='store_true',
@@ -262,7 +269,7 @@ if chosen_search:
             format_entry_human(*row,
                                search_params=chosen_search,
                                color=args.color,
-                               romaji=args.out_romaji)
+                               romajifn=args.out_romaji)
             for row in rows]))
 
     elif args.output_mode == 'tab':
@@ -270,6 +277,6 @@ if chosen_search:
             print(format_entry_tsv(*row,
                                    search_params=chosen_search,
                                    color=args.color,
-                                   romaji=args.out_romaji))
+                                   romajifn=args.out_romaji))
 else:
     sys.exit(1)

@@ -34,8 +34,6 @@
  - output:
    - color output:
      - light background mode
-   - romaji output:
-     - kunrei
    - better wrapping for "human" output
    - auto-pager
    - tsv output:

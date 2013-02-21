@@ -22,7 +22,7 @@ Sample usage
 Some example queries:
 
     $ myougiden -h             # long help
-    $ myougiden "tea ceremony" # guess what to query
+    $ myougiden tea ceremony   # guess what to query
     $ myougiden 茶             # ibid
     $ myougiden -p 茶          # include partial matches
     $ myougiden -p -t 茶       # ...and tab-separated, single-line output
