@@ -8,7 +8,7 @@ import romkan
 from termcolor import *
 from glob import glob
 
-DBVERSION = '6'
+DBVERSION = '7'
 
 PATHS = {}
 
@@ -149,8 +149,9 @@ class Sense():
     '''Attributes:
     - glosses: a list of glosses.
     - pos: part-of-speech.
-    - misc: other info.
+    - misc: other info, abbreviated.
     - dial: dialect.
+    - s_inf: long case-by-case remarks.
     - id: database ID.
     '''
 
@@ -159,11 +160,13 @@ class Sense():
                  pos=None,
                  misc=None,
                  dial=None,
+                 s_inf=None,
                  glosses=None):
         self.id = id
         self.pos = pos
         self.misc = misc
         self.dial = dial
+        self.s_inf = s_inf
         self.glosses = glosses or list()
 
         self.color=False
@@ -171,19 +174,24 @@ class Sense():
     def tagstr(self, color=False):
         '''Return a string with all information tags.'''
 
+        tagstr = ''
         tags = []
         for attr in ('pos', 'misc', 'dial'):
             tag = getattr(self, attr)
             if tag:
                 tags.append(tag)
         if len(tags) > 0:
-            tagstr = '[%s]' % (','.join(tags))
-            if color:
-                return fmt(tagstr, 'subdue')
-            else:
-                return tagstr
+            tagstr += '[%s]' % (','.join(tags))
+
+        if self.s_inf:
+            if len(tagstr) > 0:
+                tagstr += ' '
+            tagstr += '[%s]' % self.s_inf
+
+        if color and len(tagstr) > 0:
+            return fmt(tagstr, 'subdue')
         else:
-            return ''
+            return tagstr
 
 class DatabaseAccessError(Exception):
     '''Generic error accessing database.'''
@@ -446,11 +454,15 @@ def fetch_entry(cur, ent_seq):
 
     senses = []
     cur.execute(
-        'SELECT id, pos, misc, dial FROM senses WHERE ent_seq = ?;',
+        'SELECT id, pos, misc, dial, s_inf FROM senses WHERE ent_seq = ?;',
         [ent_seq]
     )
     for row in cur.fetchall():
-        sense = Sense(id=row[0], pos=row[1], misc=row[2], dial=row[3])
+        sense = Sense(id=row[0],
+                      pos=row[1],
+                      misc=row[2],
+                      dial=row[3],
+                      s_inf=row[4])
 
         cur.execute('SELECT gloss FROM glosses WHERE sense_id = ?;', [sense.id])
         for row in cur.fetchall():
