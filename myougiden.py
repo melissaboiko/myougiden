@@ -312,15 +312,15 @@ def format_entry_tsv(kanjis, readings, senses, is_frequent,
     if is_frequent:
         freqmark = '(P)'
 
-    if romaji:
-        readings = [romaji(r) for r in readings]
-
     if color:
         sep_full = fmt(sep_full, 'subdue')
         sep_half = fmt(sep_half, 'subdue')
         if is_frequent:
             freqmark = fmt(freqmark, 'highlight')
         kanjis, readings, senses = colorize_data(kanjis, readings, senses, search_params)
+
+    if romajifn:
+        readings = [romaji(r) for r in readings]
 
     s = ''
 
@@ -347,9 +347,6 @@ def format_entry_human(kanjis, readings, senses, is_frequent,
     if is_frequent:
         freqmark = '※'
 
-    if romaji:
-        readings = [romaji(r) for r in readings]
-
     if color:
         sep_full = fmt(sep_full, 'subdue')
         sep_half = fmt(sep_half, 'subdue')
@@ -357,6 +354,9 @@ def format_entry_human(kanjis, readings, senses, is_frequent,
         if is_frequent:
             freqmark = fmt(freqmark, 'highlight')
         kanjis, readings, senses = colorize_data(kanjis, readings, senses, search_params)
+
+    if romajifn:
+        readings = [romajifn(r) for r in readings]
 
     s = ''
 
