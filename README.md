@@ -63,6 +63,7 @@ Installing in Debian stable
 As of this writing, Debian squeeze has no python3-pip.  You can
 install it manually like this:
 
+    $ sudo apt-get install python3.1 curl
     $ curl -O http://python-distribute.org/distribute_setup.py
     $ sudo python3.1 distribute_setup.py
     $ curl -O https://raw.github.com/pypa/pip/master/contrib/get-pip.py
