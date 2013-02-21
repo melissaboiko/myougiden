@@ -320,7 +320,7 @@ def format_entry_tsv(kanjis, readings, senses, is_frequent,
         kanjis, readings, senses = colorize_data(kanjis, readings, senses, search_params)
 
     if romajifn:
-        readings = [romaji(r) for r in readings]
+        readings = [romajifn(r) for r in readings]
 
     s = ''
 
