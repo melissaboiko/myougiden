@@ -76,7 +76,7 @@ ag.add_argument('--human', action='store_const', const='human', dest='output_mod
                 help="Equivalent to --output-mode=human")
 ag.add_argument('--color', choices=('yes', 'no', 'auto'), default='auto',
                 help='''Whether to colorize output.  Default 'auto' means to
-colorize if writing to a terminal in human mode.''')
+colorize if writing to a terminal.''')
 ag.add_argument('-c', action='store_const', const='yes', dest='color',
                 help='Equivalent to --color=yes')
 
@@ -101,7 +101,7 @@ if args.output_mode == 'auto':
         args.output_mode = 'tab'
 
 if args.color == 'auto':
-    if args.output_mode == 'human' and sys.stdout.isatty():
+    if sys.stdout.isatty():
         args.color = 'yes'
     else:
         args.color = 'no'
