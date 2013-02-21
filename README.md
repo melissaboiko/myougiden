@@ -25,7 +25,8 @@ Some example queries:
     $ myougiden tea ceremony   # guess what to query
     $ myougiden 茶             # ibid
     $ myougiden -p 茶          # include partial matches
-    $ myougiden -p -t 茶       # ...and tab-separated, single-line output
+    $ myougiden -p -f 茶       # ...but limit to frequent words
+    $ myougiden -p -f -t 茶    # ...and tab-separated, single-line output
     $ myougiden -x '茶.'       # regexp search
     $ myougiden sakura         # if no match is found, treat as rōmaji
     $ myougiden -r kanji       # forces rōmaji
