@@ -20,7 +20,7 @@ ag.add_argument('-k', '--kanji', action='store_const', dest='field', const='kanj
 ag.add_argument('-r', '--reading', action='store_const', dest='field', const='reading',
                 help='''Return entries matching query on reading (in kana).''')
 
-ag.add_argument('-g', '--gloss', action='store_const', dest='field', const='gloss',
+ag.add_argument('-g', '--gloss', '--meaning', action='store_const', dest='field', const='gloss',
                 help='''Return entries matching query on glosses (English
 translations/meaning).''')
 
