@@ -9,6 +9,7 @@ import tempfile
 import time
 import urllib.request
 import xml.parsers.expat
+import subprocess
 
 import sqlite3 as sql
 from glob import glob
@@ -228,14 +229,14 @@ def nice_self():
         me.set_nice(19)
         me.set_ionice(psutil.IOPRIO_CLASS_IDLE)
 
-    except ImportError:
+    except (ImportError, AttributeError):
         try:
             subprocess.call(['renice', '-n', '19',  str(os.getpid())])
         except OSError:
             problem=True
 
         try:
-            subprocess.call(['ionice', '-c', 'idle', str(os.getpid())])
+            subprocess.call(['ionice', '-c', 'idle', '-p', str(os.getpid())])
         except OSError:
             problem=True
 
@@ -592,4 +593,4 @@ not set, it will be automatically deleted after use.''')
 
     os.rename(PATHS['tmpdb'], PATHS['database'])
     atexit.unregister(cleanup)
-    print("All done, myougiden(1) is ready to use!")
+    print("All done, myougiden is ready to use!")
