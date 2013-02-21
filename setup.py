@@ -5,7 +5,7 @@ from distutils.command.install import install
 from distutils.core import setup
 
 # on column 0 to make it easy to change by shell script.
-version='0.4.0'
+version='0.4.1'
 
 with open(os.path.join(os.path.dirname(__file__), 'README.md')) as f:
       # hacky markdown to ResT
