@@ -87,6 +87,18 @@ def mkdir_p(path):
             pass
         else: raise
 
+class MatchesNothing():
+    '''Fake regexp object that matches nothing.
+
+    We use this because it's faster than trying to compile a regexp and failing
+    once per row.'''
+    def search(self, string, flags=0):
+        return None
+    def match(self, string, flags=0):
+        return None
+
+matchesnothing = MatchesNothing()
+
 regexp_store = {}
 def get_regexp(pattern, flags):
     '''Return a compiled regexp from persistent store; make one if needed.
@@ -94,16 +106,20 @@ def get_regexp(pattern, flags):
     We use this helper function so that the SQL hooks don't have to
     compile the same regexp at every query.
 
-    Flags are not part of the hash; i.e. this function doesn't work
-    for the same pattern with different flags.
+    Warning: Flags are not part of the hash. In other words, this function
+    doesn't work for the same pattern with different flags.
     '''
 
     if pattern in regexp_store.keys():
         return regexp_store[pattern]
     else:
-        comp = re.compile(pattern, re.U | flags)
-        regexp_store[pattern] = comp
-        return comp
+        try:
+            comp = re.compile(pattern, re.U | flags)
+            regexp_store[pattern] = comp
+            return comp
+        except re.error:
+            regexp_store[pattern] = matchesnothing
+            return matchesnothing
 
 
 def regexp_sensitive(pattern, field):
@@ -118,11 +134,13 @@ def regexp_insensitive(pattern, field):
 
 def match_word_sensitive(word, field):
     '''SQL hook function for whole-word, case-sensitive, non-regexp matching.'''
+
     reg = get_regexp(r'\b' + re.escape(word) + r'\b', 0)
     return reg.search(field) is not None
 
 def match_word_insensitive(word, field):
     '''SQL hook function for whole-word, case-sensitive, non-regexp matching.'''
+
     reg = get_regexp(r'\b' + re.escape(word) + r'\b', re.I)
     return reg.search(field) is not None
 
