@@ -176,11 +176,14 @@ class Sense():
             tag = getattr(self, attr)
             if tag:
                 tags.append(tag)
-        tagstr = '[%s]' % (','.join(tags))
-        if color:
-            return fmt(tagstr, 'subdue')
+        if len(tags) > 0:
+            tagstr = '[%s]' % (','.join(tags))
+            if color:
+                return fmt(tagstr, 'subdue')
+            else:
+                return tagstr
         else:
-            return tagstr
+            return ''
 
 class DatabaseAccessError(Exception):
     '''Generic error accessing database.'''
