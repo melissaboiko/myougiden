@@ -55,6 +55,9 @@ ag.add_argument('--word', action='store_const', const='word', dest='extent',
 
 ag.add_argument('-p', '--partial', action='store_const', const='partial', dest='extent',
                 help='Equivalent to --extent=partial.')
+ag.add_argument('-f', '--frequent', '-P', action='store_true',
+                help='''Restrict to frequent words (equivalent to EDICT
+entries marked as ‘(P)’)''')
 
 
 
@@ -161,7 +164,7 @@ if args.extent == 'word' and args.field in ('kanji', 'reading'):
 search_args = vars(args).copy() # turn Namespace to dict
 # keep only interesting keys
 for k in list(search_args.keys()):
-    if k not in ('field', 'query', 'extent', 'regexp', 'case_sensitive'):
+    if k not in ('field', 'query', 'extent', 'regexp', 'case_sensitive', 'frequent'):
         del search_args[k]
 
 # we'll iterate over all required 'field' and 'extent' conditions.

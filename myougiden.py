@@ -6,7 +6,7 @@ import sqlite3 as sql
 from termcolor import *
 from glob import glob
 
-DBVERSION = '4'
+DBVERSION = '5'
 
 PATHS = {}
 
@@ -175,10 +175,12 @@ FORMATTING={
         # 'gloss':
 
         'misc': ('green', None, None),
+        'highlight': ('green', None, ['bold']),
 
         'subdue': ('yellow', None, None),
 
-        'match': ('red', None, None)
+        'match': ('red', None, None),
+
 }
 
 def fmt(string, style):
@@ -242,37 +244,57 @@ def colorize_data(kanjis, readings, senses, search_params):
 
     return (kanjis, readings, senses)
 
-
-def format_entry_tsv(kanjis, readings, senses, search_params, color=False):
+# this thing really needs to be better thought of
+def format_entry_tsv(kanjis, readings, senses, is_frequent, search_params, color=False):
     sep_full = '；'
     sep_half = '; '
+
+    if is_frequent:
+        freqmark = '(P)'
 
     if color:
         sep_full = fmt(sep_full, 'subdue')
         sep_half = fmt(sep_half, 'subdue')
-        kanjis, readings, senses = colorize_data(kanjis, readings, senses, search_params)
-
-    s = "%s\t%s" % (sep_full.join(readings), sep_full.join(kanjis))
-    for sense in senses:
-        if sense.pos:
-            pos = ' ' + sense.pos
-        else:
-            pos = ''
-        s += "\t%s%s" % (sense.pos, sep_half.join(sense.glosses))
-    return s
-
-def format_entry_human(kanjis, readings, senses, search_params, color=True):
-    sep_full = '；'
-    sep_half = '; '
-
-    if color:
-        sep_full = fmt(sep_full, 'subdue')
-        sep_half = fmt(sep_half, 'subdue')
+        if is_frequent:
+            freqmark = fmt(freqmark, 'highlight')
         kanjis, readings, senses = colorize_data(kanjis, readings, senses, search_params)
 
     s = ''
 
-    s += sep_full.join(readings)
+    s += "%s\t%s" % (sep_full.join(readings), sep_full.join(kanjis))
+    for sense in senses:
+        if sense.pos:
+            pos = ' ' + sense.pos + ' '
+        else:
+            pos = ''
+        s += "\t%s%s" % (pos, sep_half.join(sense.glosses))
+
+    if is_frequent:
+        s += ' '  + freqmark
+
+    return s
+
+def format_entry_human(kanjis, readings, senses, is_frequent, search_params, color=True):
+    sep_full = '；'
+    sep_half = '; '
+
+    if is_frequent:
+        freqmark = '※'
+
+    if color:
+        sep_full = fmt(sep_full, 'subdue')
+        sep_half = fmt(sep_half, 'subdue')
+
+        if is_frequent:
+            freqmark = fmt(freqmark, 'highlight')
+        kanjis, readings, senses = colorize_data(kanjis, readings, senses, search_params)
+
+    s = ''
+
+    if is_frequent:
+        s += freqmark + ' ' + sep_full.join(readings)
+    else:
+        s += sep_full.join(readings)
 
     if len(kanjis) > 0:
         s += "\n"
@@ -292,11 +314,17 @@ def format_entry_human(kanjis, readings, senses, search_params, color=True):
 
 
 def fetch_entry(cur, ent_seq):
-    '''Return tuple of lists (kanjis, readings, senses).'''
+    '''Return tuple of (kanjis, readings, senses, is_frequent).'''
 
     kanjis = [] # list of strings
     readings = [] # list of strings
     senses = [] # list of Sense objects
+
+    cur.execute('SELECT frequent FROM entries WHERE ent_seq = ?;', [ent_seq])
+    if cur.fetchone()[0] == 1:
+        is_frequent = True
+    else:
+        is_frequent = False
 
     cur.execute('SELECT kanji FROM kanjis WHERE ent_seq = ?;', [ent_seq])
     for row in cur.fetchall():
@@ -322,9 +350,9 @@ def fetch_entry(cur, ent_seq):
 
         senses.append(sense)
 
-    return (kanjis, readings, senses)
+    return (kanjis, readings, senses, is_frequent)
 
-def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=False):
+def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=False, frequent=False):
     '''Main search function.  Return list of ent_seqs.
 
     Field in ('kanji', 'reading', 'gloss').
@@ -373,17 +401,18 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
         table = 'glosses'
         join = 'NATURAL JOIN senses JOIN glosses ON senses.id = glosses.sense_id'
 
-    # print('SELECT ent_seq FROM entries %s WHERE %s.%s %s;'
-    #       % (join, table, field, operator),
-    #       query)
+    where_extra = ''
+    if frequent:
+        where_extra += 'AND frequent = 1'
 
     cur.execute('''
 SELECT ent_seq
 FROM entries
   %s
 WHERE %s.%s %s
+%s
 ;'''
-                % (join, table, field, operator),
+                % (join, table, field, operator, where_extra),
                 [query])
 
     res = []

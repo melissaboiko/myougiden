@@ -279,10 +279,14 @@ def create_tables(cur):
       );
     ''')
 
+    # 'frequent' is roughly equivalent to the P flag in EDICT.
+    # to simplify, at the moment we're adding it to the entire entry
+    # (rather than indivually to reading/kanji pairs).
     cur.execute('''
       CREATE TABLE
       entries (
-        ent_seq INTEGER PRIMARY KEY
+        ent_seq INTEGER PRIMARY KEY,
+        frequent INTEGER DEFAULT 0
       );
     ''')
 
@@ -464,6 +468,10 @@ def make_database(jmdict, sqlite, progress=True):
             cur.execute('INSERT INTO kanjis(ent_seq, kanji) VALUES (?, ?);',
                     [ent_seq, cdata])
 
+        elif el in ('ke_pri', 're_pri'):
+            if cdata in ('news1', 'ichi1', 'spec1', 'gai1'):
+                cur.execute('UPDATE entries SET frequent = 1 WHERE ent_seq = ?;', [ent_seq])
+
         elif el == 'pos':
             for abr, exp in long_expansions.items():
                 if cdata == exp:
@@ -476,7 +484,6 @@ def make_database(jmdict, sqlite, progress=True):
         elif el == 'gloss':
             cur.execute('INSERT INTO glosses(sense_id, gloss) VALUES (?, ?);',
                     [sense_id, cdata])
-
 
     p = xml.parsers.expat.ParserCreate()
     p.buffer_text = True
