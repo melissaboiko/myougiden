@@ -30,6 +30,7 @@
  - output:
    - color outputs:
      - light background mode
+     - enbolden matches when ascii
    - better wrapping for "human" output
    - auto-pager
 
