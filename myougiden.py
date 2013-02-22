@@ -12,9 +12,12 @@ DBVERSION = '7'
 
 PATHS = {}
 
-PATHS['pkgprefix'] = os.path.realpath(os.path.dirname(__file__))
-PATHS['vardir'] = os.path.join(PATHS['pkgprefix'], 'var')
-PATHS['database'] = os.path.join(PATHS['vardir'], 'jmdict.sqlite')
+PATHS['prefix'] = '/usr/local'
+if re.search('/lib/', os.path.dirname(__file__)):
+    PATHS['prefix'] = re.sub('/lib/.*', '', os.path.dirname(__file__))
+
+PATHS['sharedir'] = os.path.join(PATHS['prefix'], 'share', 'myougiden')
+PATHS['database'] = os.path.join(PATHS['sharedir'], 'jmdict.sqlite')
 PATHS['jmdictgz_http_url'] = 'http://ftp.monash.edu.au/pub/nihongo/JMdict_e.gz'
 PATHS['jmdict_rsync_url'] = 'rsync://ftp.monash.edu.au/nihongo/JMdict_e'
 
