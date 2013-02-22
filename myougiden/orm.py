@@ -1,6 +1,7 @@
-import myougiden.color
-from myougiden.color import fmt, color_regexp
-from myougiden.common import matched_regexp
+from myougiden import config
+from myougiden import search
+from myougiden import color
+from myougiden.color import fmt
 
 class Entry():
     '''Equivalent to JMdict entry.'''
@@ -24,10 +25,10 @@ class Entry():
     def colorize(self, search_params):
         '''Alter child elements to add color, including the matched search.'''
 
-        if not myougiden.color.use_color:
+        if not color.use_color:
             return
 
-        matchreg = matched_regexp(search_params)
+        matchreg = search.matched_regexp(search_params)
         if search_params['field'] == 'reading':
             for reading in self.readings:
                 reading.colorize(matchreg=matchreg)
@@ -138,7 +139,7 @@ class Kanji():
 
     def colorize(self, matchreg=None):
         if matchreg:
-            self.text = color_regexp(matchreg, self.text, 'kanji')
+            self.text = color.color_regexp(matchreg, self.text, 'kanji')
         else:
             self.text = fmt(self.text, 'kanji')
 
@@ -158,7 +159,7 @@ class Reading():
 
     def colorize(self, matchreg=None):
         if matchreg:
-            self.text = color_regexp(matchreg, self.text, 'reading')
+            self.text = color.color_regexp(matchreg, self.text, 'reading')
         else:
             self.text = fmt(self.text, 'reading')
 
@@ -218,7 +219,7 @@ class Sense():
 
         if matchreg:
             for idx, gloss in enumerate(self.glosses):
-                self.glosses[idx] = color_regexp(matchreg, gloss)
+                self.glosses[idx] = color.color_regexp(matchreg, gloss)
 
 def fetch_entry(cur, ent_seq):
     '''Return Entry object..'''
@@ -273,3 +274,28 @@ def fetch_entry(cur, ent_seq):
                  readings=readings,
                  senses=senses,
                  frequent=frequent)
+
+def short_expansion(cur, abbrev):
+    cur.execute(''' SELECT short_expansion FROM abbreviations WHERE abbrev = ? ;''', [abbrev])
+    row = cur.fetchone()
+    if row:
+        return row[0]
+    else:
+        return None
+
+def abbrev_line(cur, abbrev):
+    exp = short_expansion(cur, abbrev)
+    abbrev = fmt(abbrev, 'subdue')
+    return "%s\t%s" % (abbrev, exp)
+
+def abbrevs_table(cur):
+    cur.execute('''
+    SELECT abbrev
+    FROM abbreviations
+    ORDER BY abbrev
+    ;''')
+
+    abbrevs=[]
+    for row in cur.fetchall():
+        abbrevs.append(row[0])
+    return "\n".join([abbrev_line(cur, abbrev) for abbrev in abbrevs])

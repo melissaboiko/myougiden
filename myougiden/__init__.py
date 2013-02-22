@@ -1,10 +1,9 @@
 import configparser
 import re
 import os
-from configparser import ConfigParser
 
 def read_config():
-    cp = ConfigParser()
+    cp = configparser.ConfigParser()
     dirname = os.path.dirname(__file__)
 
     # default for running from source dir

@@ -4,19 +4,13 @@ import sys
 import re
 import romkan
 
-try:
-    from myougiden.common import *
-    from myougiden.database import *
-    from myougiden.texttools import *
-    from myougiden.orm import fetch_entry
-    import myougiden.color
-except ImportError:
-    sys.path.append('.')
-    from myougiden.common import *
-    from myougiden.database import *
-    from myougiden.texttools import *
-    from myougiden.orm import fetch_entry
-    import myougiden.color
+from myougiden import config
+from myougiden import color
+from myougiden import database
+from myougiden import orm
+from myougiden import common
+from myougiden import texttools as tt
+from myougiden import search
 
 ap = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 
@@ -126,7 +120,7 @@ if args.color == 'auto':
     else:
         args.color = 'no'
 
-myougiden.color.use_color =  (args.color == 'yes')
+color.use_color =  (args.color == 'yes')
 
 args.query = ' '.join(args.query)
 
@@ -137,11 +131,11 @@ if not args.case_sensitive:
 
 # try to open database
 try:
-    con, cur = opendb(case_sensitive=args.case_sensitive)
-except (DatabaseUpdating, DatabaseStaleUpdates) as e:
+    con, cur = database.opendb(case_sensitive=args.case_sensitive)
+except (database.DatabaseUpdating, database.DatabaseStaleUpdates) as e:
     print(str(e) + '.')
     sys.exit(1)
-except DatabaseAccessError as e:
+except database.DatabaseAccessError as e:
     print('''Database error: %s.
 Expected database version %s at:
 %s
@@ -162,13 +156,13 @@ you might want to add the update command to cron (for example, in
 
 # handle short commands first.
 if args.list_abbrevs:
-    print(abbrevs_table(cur))
+    print(orm.abbrevs_table(cur))
     sys.exit(0)
 elif args.abbrev:
-    print(abbrev_line(cur, args.abbrev))
+    print(orm.abbrev_line(cur, args.abbrev))
     sys.exit(0)
 elif args.version:
-    print(version(cur))
+    print(common.version(cur))
     sys.exit(0)
 
 # handle query guesswork
@@ -195,13 +189,13 @@ for k in list(search_args.keys()):
 # even if the size of the list is 1.
 
 if args.field == 'auto':
-    if is_latin(args.query):
+    if tt.is_latin(args.query):
         # if pure alphabet, try as English first, then as rōmaji
         fields = ('gloss', 'reading', 'kanji')
-    elif is_romaji(args.query):
+    elif tt.is_romaji(args.query):
         # latin with special chars; probably rōmaji
         fields = ('reading', 'gloss', 'kanji')
-    elif is_kana(args.query):
+    elif tt.is_kana(args.query):
         fields = ('reading', 'kanji', 'gloss')
     else:
         fields = ('kanji', 'reading', 'gloss')
@@ -215,7 +209,7 @@ else:
 
 if args.regexp:
     regexp_flags = (True,)
-elif has_regexp_special(args.query):
+elif tt.has_regexp_special(args.query):
     regexp_flags = (False, True)
 else:
     regexp_flags = (False,)
@@ -250,7 +244,7 @@ for regexp in regexp_flags:
             conditions.append(sa)
 
 # deal with rōmaji queries
-if (args.field in ('auto', 'reading') and is_romaji(args.query)):
+if (args.field in ('auto', 'reading') and tt.is_romaji(args.query)):
 
     if re.search('[A-Z]', args.query):
         kana_guess=(romkan.to_katakana, romkan.to_hiragana)
@@ -265,7 +259,7 @@ if (args.field in ('auto', 'reading') and is_romaji(args.query)):
                 # so we try it converted to kana _first_, then try as-is.
                 # thus the insert.
 
-                for romaji in expand_romaji(oldcond['query']):
+                for romaji in tt.expand_romaji(oldcond['query']):
                     newcond = oldcond.copy()
                     newcond['query'] = kanafn(romaji)
                     new_conditions.insert(new_conditions.index(oldcond),
@@ -273,18 +267,18 @@ if (args.field in ('auto', 'reading') and is_romaji(args.query)):
     conditions = new_conditions
 
 
-chosen_search, ent_seqs = guess_search(cur, conditions)
+chosen_search, ent_seqs = search.guess(cur, conditions)
 
 if chosen_search:
     if args.output_mode == 'human':
-        entries = [fetch_entry(cur, ent_seq) for ent_seq in ent_seqs]
+        entries = [orm.fetch_entry(cur, ent_seq) for ent_seq in ent_seqs]
         print("\n\n".join([
             entry.format_human(search_params=chosen_search,
                                romajifn=args.out_romaji)
             for entry in entries]))
 
     elif args.output_mode == 'tab':
-        for entry in [fetch_entry(cur, ent_seq) for ent_seq in ent_seqs]:
+        for entry in [orm.fetch_entry(cur, ent_seq) for ent_seq in ent_seqs]:
             print(entry.format_tsv(search_params=chosen_search,
                                    romajifn=args.out_romaji))
 else:

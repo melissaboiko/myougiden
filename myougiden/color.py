@@ -1,6 +1,4 @@
 import termcolor
-import re
-from myougiden.texttools import get_regexp
 
 # don't you love globals
 use_color = False
@@ -51,7 +49,7 @@ def coloredpb(string, color):
 def fmt(string, style):
     return coloredp(string, *(STYLES[style]))
 
-def color_percent(string, percent):
+def percent(string, percent):
     if not use_color:
         return string
     if percent < 0.33:

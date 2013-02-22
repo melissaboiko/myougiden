@@ -1,9 +1,10 @@
 import os
+import re
 from glob import glob
 import sqlite3 as sql
 
 from myougiden import config
-from myougiden.texttools import *
+from myougiden.texttools import get_regexp
 
 def regexp_sensitive(pattern, field):
     '''SQL hook function for case-sensitive regexp matching.'''

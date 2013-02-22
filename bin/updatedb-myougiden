@@ -1,33 +1,23 @@
 #!/usr/bin/env python3
 import atexit
-import errno
 import gzip
 import os
+import re
 import signal
+import subprocess
 import sys
 import tempfile
 import time
 import urllib.request
 import xml.parsers.expat
-import subprocess
-import termcolor
 
 import sqlite3 as sql
 from glob import glob
 
-try:
-    from myougiden.common import *
-    from myougiden.database import *
-    from myougiden.texttools import *
-    from myougiden.color import fmt, color_percent
-    import myougiden.color
-except ImportError:
-    sys.path.append('.')
-    from myougiden.common import *
-    from myougiden.database import *
-    from myougiden.texttools import *
-    from myougiden.color import fmt, color_percent
-    import myougiden.color
+from myougiden import config
+from myougiden import color
+from myougiden import common
+from myougiden.color import fmt
 
 # JMdict expansions are too damn long
 short_expansions = {
@@ -421,13 +411,13 @@ def print_coffee():
     perc = float(donecount) / todo
 
     sys.stdout.write(coffeesteam[animation_frame])
-    sys.stdout.write(color_percent(coffeecup, perc))
+    sys.stdout.write(color.percent(coffeecup, perc))
     animation_frame = (animation_frame+1) % len(coffeesteam)
 
     # 6: hardcoded len(str(todo))
-    donestr = color_percent("%6d" % donecount, perc)
+    donestr = color.percent("%6d" % donecount, perc)
     todostr = fmt("%6d" % todo, 'info')
-    percstr = color_percent("%2.2f" % (perc*100), perc)
+    percstr = color.percent("%2.2f" % (perc*100), perc)
 
     if donecount == todo:
         print(" %s/%s (%s%%) All done!" %
@@ -453,7 +443,7 @@ def make_database(jmdict, sqlite, progress=True):
     global todo
     global donecount
 
-    mkdir_p(os.path.dirname(config['paths']['database']))
+    common.mkdir_p(os.path.dirname(config['paths']['database']))
 
     ent_seq = None
     sense_id = None
@@ -641,7 +631,7 @@ def fetch_jmdict_xml(localgz):
             urllib.request.urlretrieve(config['urls']['jmdictgz_http'], localgz)
 
     else:
-        mkdir_p(os.path.dirname(localgz))
+        common.mkdir_p(os.path.dirname(localgz))
 
         print('%s full dictionary data from %s to %s ...' % (
             fmt('Downloading', 'info'),
@@ -688,7 +678,7 @@ colorize if writing to a terminal.''')
             args.color = 'yes'
         else:
             args.color = 'no'
-    if args.color == 'yes': myougiden.color.use_color = True
+    if args.color == 'yes': color.use_color = True
 
     if not localxml_exists and not args.fetch:
         # assume no one would want to call the script just to be told
