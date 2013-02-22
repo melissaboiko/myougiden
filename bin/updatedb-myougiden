@@ -16,10 +16,10 @@ import sqlite3 as sql
 from glob import glob
 
 try:
-    from myougiden import *
+    from myougiden.myougiden import *
 except ImportError:
     sys.path.append('.')
-    from myougiden import *
+    from myougiden.myougiden import *
 
 # JMdict expansions are too damn long
 short_expansions = {
