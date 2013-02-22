@@ -33,6 +33,9 @@
    - better wrapping for "human" output
    - auto-pager
 
+ - better error handling:
+   - pretty message when download fails
+e
  - better documentation
    - tsv output
    - manpage?
