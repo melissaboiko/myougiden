@@ -7,8 +7,6 @@
    - more JMdict fields?
      - reproduce everything in EDICT at the very least.
 
-   - add JMdict date (file timestamp, until they add it to the dtd)
-
    - clean abbreviations that are not being used
 
    - don't be entry-centric
@@ -38,6 +36,7 @@
  - better documentation
    - tsv output
    - manpage?
+   - --version
 
  - config file support?
    - option --saveconf
@@ -56,3 +55,4 @@
   - backend: EDICT2 with grep
   - backend: some NoSQL thing?
   - backend: some kind of "full-text search" thing?
+  - DICT?

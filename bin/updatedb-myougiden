@@ -257,7 +257,7 @@ def nice_self():
 
     return problem == False
 
-def create_tables(cur):
+def create_tables(cur, jmdictxml):
     # what about a custom collation function?
 
     # I couldn't make executemany() work as I expected. run one by one.
@@ -272,13 +272,18 @@ def create_tables(cur):
 
     cur.execute('''
       CREATE TABLE versions (
-        dbversion TEXT PRIMARY KEY
+        dbversion TEXT PRIMARY KEY,
+        jmdict_mtime TEXT DEFAULT NULL
       );
     ''')
 
     cur.execute('''
-      INSERT INTO versions VALUES ( ? );
-    ''', [config['core']['dbversion']])
+      INSERT INTO versions VALUES (?, ?);
+    ''',
+                [config['core']['dbversion'],
+                 time.strftime('%Y-%m-%d',
+                               time.gmtime(os.path.getmtime(jmdictxml)))]
+               )
 
 
     # basically what's encoded as entities in JMdict.xml .
@@ -540,7 +545,7 @@ def make_database(jmdict, sqlite, progress=True):
     con = sql.connect(tmpdb, isolation_level='IMMEDIATE')
     cur = con.cursor()
 
-    create_tables(cur)
+    create_tables(cur, jmdict.name)
 
     if progress:
         sys.stdout.write("Counting entries...")
