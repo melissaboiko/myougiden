@@ -2,84 +2,21 @@ import errno
 import sys
 import os
 import re
-import sqlite3 as sql
 import romkan
 import configparser
 
 from termcolor import *
-from glob import glob
+from myougiden import *
+from myougiden.texttools import *
 
-DBVERSION = '7'
+import myougiden
 
 PATHS = {}
 
-PATHS['prefix'] = '/usr/local'
-if re.search('/lib/', os.path.dirname(__file__)):
-    PATHS['prefix'] = re.sub('/lib/.*', '', os.path.dirname(__file__))
-
-PATHS['sharedir'] = os.path.join(PATHS['prefix'], 'share', 'myougiden')
+PATHS['sharedir'] = os.path.join(config['paths']['prefix'], 'share', 'myougiden')
 PATHS['database'] = os.path.join(PATHS['sharedir'], 'jmdict.sqlite')
 PATHS['jmdictgz_http_url'] = 'http://ftp.monash.edu.au/pub/nihongo/JMdict_e.gz'
 PATHS['jmdict_rsync_url'] = 'rsync://ftp.monash.edu.au/nihongo/JMdict_e'
-
-# extracted from edict "reading" fields. TODO: cross-check with Unicode
-edict_kana='・？ヽヾゝゞー〜ぁあぃいうぇえおかがきぎくぐけげこごさざしじすずせぜそぞただちっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろわゐゑをんァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヰヱヲンヴヶ'
-edict_kana_regexp=re.compile("^[%s]+$" % edict_kana)
-def is_kana(string):
-    return edict_kana_regexp.match(string) is not None
-
-latin_regexp=re.compile(r'^[\]\-'
-                       + r' !"#$%&()*+,./:;<=>?@\\^_`{}|~‘’“”'
-                       + "'"
-                       + 'a-zA-Z0-9'
-                       + ']+$')
-def is_latin(string):
-    return latin_regexp.match(string) is not None
-
-romaji_regexp=re.compile(r'^[\]\-'
-                         + r' !"#$%&()*+,./:;<=>?@\\^_`{}|~‘’“”'
-                         + "'"
-                         + 'a-zA-Z0-9'
-                         + 'āēīōūĀĒĪŌŪâêîôûÂÊÎÔÛ'
-                         + ']+$')
-def is_romaji(string):
-    return romaji_regexp.match(string) is not None
-
-def has_regexp_special(string):
-    '''True if string has special characters of regular expressions.'''
-    special = re.compile('[%s]' % re.escape(r'.^$*+?{}()[]\|'))
-    return special.search(string)
-
-romaji_expansions = {
-    'ā': 'aa',
-    'â': 'aa',
-    'ī': 'ii',
-    'î': 'ii',
-    'ū': 'uu',
-    'û': 'uu',
-}
-romaji_expansions_o = [{'ō': 'ou', 'ô': 'ou'},
-                       {'ō': 'oo', 'ô': 'oo'}]
-romaji_expansions_e = [{'ē': 'ei', 'ê': 'ei'},
-                       {'ē': 'ee', 'ê': 'ee'}]
-
-def expand_romaji(string):
-    '''kā -> [kaa] ; kāmyō -> [kaamyou, kaamyoo] '''
-
-    for char, rep in romaji_expansions.items():
-        string = string.replace(char, rep)
-
-    variations = []
-    for o in romaji_expansions_o:
-        for e in romaji_expansions_e:
-            var = string[:]
-            for char, rep in o.items():
-                var = var.replace(char, rep)
-            for char, rep in e.items():
-                var = var.replace(char, rep)
-            if var not in variations:
-                variations.append(var)
-    return variations
 
 
 # from http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
@@ -96,63 +33,6 @@ def mkdir_p(path):
             return
         else:
             raise e
-
-class MatchesNothing():
-    '''Fake regexp object that matches nothing.
-
-    We use this because it's faster than trying to compile a regexp and failing
-    once per row.'''
-    def search(self, string, flags=0):
-        return None
-    def match(self, string, flags=0):
-        return None
-
-matchesnothing = MatchesNothing()
-
-regexp_store = {}
-def get_regexp(pattern, flags):
-    '''Return a compiled regexp from persistent store; make one if needed.
-
-    We use this helper function so that the SQL hooks don't have to
-    compile the same regexp at every query.
-
-    Warning: Flags are not part of the hash. In other words, this function
-    doesn't work for the same pattern with different flags.
-    '''
-
-    if pattern in regexp_store.keys():
-        return regexp_store[pattern]
-    else:
-        try:
-            comp = re.compile(pattern, re.U | flags)
-            regexp_store[pattern] = comp
-            return comp
-        except re.error:
-            regexp_store[pattern] = matchesnothing
-            return matchesnothing
-
-
-def regexp_sensitive(pattern, field):
-    '''SQL hook function for case-sensitive regexp matching.'''
-    reg = get_regexp(pattern, 0)
-    return reg.search(field) is not None
-
-def regexp_insensitive(pattern, field):
-    '''SQL hook function for case-insensitive regexp matching.'''
-    reg = get_regexp(pattern, re.I)
-    return reg.search(field) is not None
-
-def match_word_sensitive(word, field):
-    '''SQL hook function for whole-word, case-sensitive, non-regexp matching.'''
-
-    reg = get_regexp(r'\b' + re.escape(word) + r'\b', 0)
-    return reg.search(field) is not None
-
-def match_word_insensitive(word, field):
-    '''SQL hook function for whole-word, case-sensitive, non-regexp matching.'''
-
-    reg = get_regexp(r'\b' + re.escape(word) + r'\b', re.I)
-    return reg.search(field) is not None
 
 
 class Sense():
@@ -202,70 +82,6 @@ class Sense():
             return fmt(tagstr, 'subdue')
         else:
             return tagstr
-
-class DatabaseAccessError(Exception):
-    '''Generic error accessing database.'''
-    pass
-
-class DatabaseMissing(DatabaseAccessError):
-    '''Database not found.'''
-    pass
-class DatabaseWrongVersion(DatabaseAccessError):
-    '''Database is of wrong version.'''
-    pass
-class DatabaseUpdating(DatabaseAccessError):
-    '''Database is currently updating.'''
-    pass
-class DatabaseStaleUpdates(DatabaseAccessError):
-    '''Temporary files left, updating process aborted anormally.'''
-    pass
-
-def opendb(case_sensitive=False):
-    '''Test and open SQL database; returns (con, cur).
-
-    Raises DatabaseAccessError subclass if database can't be used for any
-    reason.'''
-
-    temps = glob(PATHS['database'] + '.new.*')
-    if temps:
-        for temp in temps:
-            m = re.match(PATHS['database'] + '.new.([0-9]*)',
-                         temp)
-            pid = int(m.group(1))
-            try:
-                os.getpgid(pid)
-            except OSError:
-                raise DatabaseStaleUpdates('updatedb-myougiden was interrupted; please run again')
-        raise DatabaseUpdating('updatedb-myougiden is running, please wait a while :)')
-
-    if not os.path.isfile(PATHS['database']):
-        raise DatabaseMissing('Could not find ' + PATHS['database'])
-
-    try:
-        con = sql.connect(PATHS['database'])
-        cur = con.cursor()
-    except sql.OperationalError as e:
-        raise DatabaseAccessError(str(e))
-
-    try:
-        cur.execute('SELECT dbversion FROM versions;')
-        dbversion = cur.fetchone()[0]
-    except sql.OperationalError:
-        raise DatabaseAccessError("Couldn't read database to check version")
-
-    if dbversion != DBVERSION:
-        raise DatabaseWrongVersion('Incorrect database version: %s' % dbversion)
-
-    if case_sensitive:
-        con.create_function('regexp', 2, regexp_sensitive)
-        con.create_function('match', 2, match_word_sensitive)
-        cur.execute('PRAGMA case_sensitive_like = 1;')
-    else:
-        con.create_function('regexp', 2, regexp_insensitive)
-        con.create_function('match', 2, match_word_insensitive)
-        cur.execute('PRAGMA case_sensitive_like = 0;')
-
-    return con, cur
 
 
 # style : args

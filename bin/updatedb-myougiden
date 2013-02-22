@@ -16,10 +16,14 @@ import sqlite3 as sql
 from glob import glob
 
 try:
-    from myougiden.myougiden import *
+    from myougiden.common import *
+    from myougiden.database import *
+    from myougiden.texttools import *
 except ImportError:
     sys.path.append('.')
-    from myougiden.myougiden import *
+    from myougiden.common import *
+    from myougiden.database import *
+    from myougiden.texttools import *
 
 # JMdict expansions are too damn long
 short_expansions = {
@@ -213,16 +217,18 @@ todo=None
 # rather than using transactions, locks and so on, it was found to be faster to
 # just remove the file. so we create a new database, and move it over the old
 # one on success.
-PATHS['tmpdb'] = "%s.new.%d" % (PATHS['database'], os.getpid())
-to_delete = []
+tmpdb = "%s.new.%d" % (config['paths']['database'], os.getpid())
+to_delete = [tmpdb]
+
 # if problems are found, we just delete the temp database.
 def cleanup():
-    # sqlite creates "dbname-journal" files
-    for path in glob(PATHS['tmpdb'] + '*'):
-        os.remove(path)
     for f in to_delete:
         if os.path.isfile(f):
             os.remove(f)
+
+    # sqlite creates "dbname-journal" files
+    for path in glob(tmpdb + '*'):
+        os.remove(path)
 
 atexit.register(cleanup)
 
@@ -279,7 +285,7 @@ def create_tables(cur):
 
     cur.execute('''
       INSERT INTO versions VALUES ( ? );
-    ''', [DBVERSION])
+    ''', [config['core']['dbversion']])
 
 
     # basically what's encoded as entities in JMdict.xml .
@@ -458,7 +464,7 @@ def make_database(jmdict, sqlite, progress=True):
     global todo
     global donecount
 
-    mkdir_p(os.path.dirname(PATHS['database']))
+    mkdir_p(os.path.dirname(config['paths']['database']))
 
     ent_seq = None
     sense_id = None
@@ -547,7 +553,7 @@ def make_database(jmdict, sqlite, progress=True):
     # it does nothing!
     # p.SetParamEntityParsing(xml.parsers.expat.XML_PARAM_ENTITY_PARSING_NEVER)
 
-    con = sql.connect(PATHS['tmpdb'], isolation_level='IMMEDIATE')
+    con = sql.connect(config['paths']['tmpdb'], isolation_level='IMMEDIATE')
     cur = con.cursor()
 
     create_tables(cur)
@@ -622,12 +628,12 @@ def fetch_jmdict_xml(localgz):
         try:
             print('%s remote file %s to %s' % (
                 coloredp('Syncing', 'magenta'),
-                coloredp(PATHS['jmdict_rsync_url'], 'green'),
+                coloredp(config['paths']['jmdict_rsync_url'], 'green'),
                 coloredp(localgz, 'green'),
             ))
 
             gunzip_file(localgz)
-            st = subprocess.call(['rsync', '--progress', '-v', '-z', PATHS['jmdict_rsync_url'], localxml])
+            st = subprocess.call(['rsync', '--progress', '-v', '-z', config['paths']['jmdict_rsync_url'], localxml])
             if st != 0:
                 raise RuntimeError("rsync returned %d" % st)
             gzip_file(localxml)
@@ -641,18 +647,18 @@ def fetch_jmdict_xml(localgz):
 
             print('Will try to %s from %s ...' % (
                 coloredp('download entire file', 'magenta'),
-                coloredp(PATHS['jmdictgz_http_url'], 'green')))
+                coloredp(config['paths']['jmdictgz_http_url'], 'green')))
 
-            urllib.request.urlretrieve(PATHS['jmdictgz_http_url'], localgz)
+            urllib.request.urlretrieve(config['paths']['jmdictgz_http_url'], localgz)
 
     else:
         mkdir_p(os.path.dirname(localgz))
 
         print('%s full dictionary data from %s to %s ...' % (
             coloredp('Downloading', 'magenta'),
-            coloredp(PATHS['jmdictgz_http_url'], 'green'),
+            coloredp(config['paths']['jmdictgz_http_url'], 'green'),
             coloredp(localgz, 'green')))
-        urllib.request.urlretrieve(PATHS['jmdictgz_http_url'], localgz)
+        urllib.request.urlretrieve(config['paths']['jmdictgz_http_url'], localgz)
 
 
 if __name__ == '__main__':
@@ -661,14 +667,14 @@ if __name__ == '__main__':
 
     ap.add_argument('-f', '--fetch', action='store_true',
                     help=('''Try to fetch JMdict_e.gz from
-%s .''' % PATHS['jmdictgz_http_url']))
+%s .''' % config['paths']['jmdictgz_http_url']))
 
     ap.add_argument('-k', '--delete', action='store_true',
                     help='''Delete downloaded JMdict_e.gz file after fetching.
 If not set, it will be kept to speed up future updates.''')
 
     ap.add_argument('-j', '--jmdict',
-                    default=os.path.join(PATHS['sharedir'], 'JMdict_e.gz'),
+                    default=os.path.join(config['paths']['jmdictgz']),
                     metavar='PATH',
                     help='''Path of local JMdict_e.gz file. Default:
 %(default)s .''')
@@ -709,9 +715,9 @@ colorize if writing to a terminal.''')
         xmlgzpath = args.jmdict
 
     # check for already running process & leftovers
-    updating_files = glob(PATHS['database'] + '.new.*')
+    updating_files = glob(config['paths']['database'] + '.new.*')
     for uf in updating_files:
-        m = re.match(PATHS['database'] + '.new.([0-9]*)', uf)
+        m = re.match(config['paths']['database'] + '.new.([0-9]*)', uf)
         pid = int(m.group(1))
         try:
             os.getpgid(pid)
@@ -742,12 +748,12 @@ colorize if writing to a terminal.''')
             coloredp(xmlgzpath, 'green')))
 
     progress = sys.stdout.isatty()
-    make_database(gzip.open(xmlgzpath, 'r'), PATHS['tmpdb'], progress=progress)
+    make_database(gzip.open(xmlgzpath, 'r'), tmpdb, progress=progress)
 
     if args.delete:
         print("Deleting temporary file.")
         os.remove(xmlgzpath)
 
-    os.rename(PATHS['tmpdb'], PATHS['database'])
+    os.rename(tmpdb, config['paths']['database'])
     atexit.unregister(cleanup)
     print("myougiden is ready to use, enjoy!")

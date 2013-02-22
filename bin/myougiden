@@ -2,12 +2,17 @@
 import argparse
 import sys
 import re
+import romkan
 
 try:
-    from myougiden.myougiden import *
+    from myougiden.common import *
+    from myougiden.database import *
+    from myougiden.texttools import *
 except ImportError:
     sys.path.append('.')
-    from myougiden.myougiden import *
+    from myougiden.common import *
+    from myougiden.database import *
+    from myougiden.texttools import *
 
 ap = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 
@@ -146,7 +151,7 @@ It will take a while, but lookups afterwards will be fast.
 JMdict is frequently updated.  If you'd like to keep up with new entries,
 you might want to add the update command to cron (for example, in
 /etc/cron.weekly/myougiden ).'''
-    % (str(e), DBVERSION, PATHS['database']))
+    % (str(e), config['core']['dbversion'], config['paths']['database']))
 
     sys.exit(2)
 

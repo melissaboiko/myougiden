@@ -1,7 +1,8 @@
+build
+dist
 JMdict*
 jmdict.sqlite
 *journal
-__pycache*
 MANIFEST
-dist
-build
+*.pyc
+__pycache*
