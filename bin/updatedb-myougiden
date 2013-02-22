@@ -620,10 +620,11 @@ def fetch_jmdict_xml(localgz):
         localxml = re.sub(r'\.gz$', '', localgz)
 
         try:
-            print('%s file %s from %s' % (
+            print('%s remote file %s to %s' % (
                 coloredp('Syncing', 'magenta'),
+                coloredp(PATHS['jmdict_rsync_url'], 'green'),
                 coloredp(localgz, 'green'),
-                coloredp(PATHS['jmdict_rsync_url'], 'green')))
+            ))
 
             gunzip_file(localgz)
             st = subprocess.call(['rsync', '--progress', '-v', '-z', PATHS['jmdict_rsync_url'], localxml])
