@@ -417,7 +417,7 @@ def print_coffee():
     # 6: hardcoded len(str(todo))
     donestr = color.percent("%6d" % donecount, perc)
     todostr = fmt("%6d" % todo, 'info')
-    percstr = color.percent("%2.2f" % (perc*100), perc)
+    percstr = color.percent("%6.2f" % (perc*100), perc)
 
     if donecount == todo:
         print(" %s/%s (%s%%) All done!" %
