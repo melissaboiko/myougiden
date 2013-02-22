@@ -48,7 +48,6 @@
    - smarter handling of dev vs. installed environments
    - can we make pypi post-uninstall delete database?
    - deb?
-   - support rsync JMdict delta
 
  - alternative backends?
   - better benchmarks to compare them

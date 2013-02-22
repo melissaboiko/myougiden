@@ -15,7 +15,8 @@ PATHS = {}
 PATHS['pkgprefix'] = os.path.realpath(os.path.dirname(__file__))
 PATHS['vardir'] = os.path.join(PATHS['pkgprefix'], 'var')
 PATHS['database'] = os.path.join(PATHS['vardir'], 'jmdict.sqlite')
-PATHS['jmdict_url'] = 'http://ftp.monash.edu.au/pub/nihongo/JMdict_e.gz'
+PATHS['jmdictgz_http_url'] = 'http://ftp.monash.edu.au/pub/nihongo/JMdict_e.gz'
+PATHS['jmdict_rsync_url'] = 'rsync://ftp.monash.edu.au/nihongo/JMdict_e'
 
 # extracted from edict "reading" fields. TODO: cross-check with Unicode
 edict_kana='・？ヽヾゝゞー〜ぁあぃいうぇえおかがきぎくぐけげこごさざしじすずせぜそぞただちっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろわゐゑをんァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヰヱヲンヴヶ'
@@ -80,12 +81,17 @@ def expand_romaji(string):
 # from http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
 # convenience function because python < 3.2 has no exist_ok
 def mkdir_p(path):
+    # safely allows mkdir_p(os.path.dirname('nodirs'))
+    if path == '':
+        return
+
     try:
         os.makedirs(path)
-    except OSError as exc:
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else: raise
+    except OSError as e:
+        if e.errno == errno.EEXIST and os.path.isdir(path):
+            return
+        else:
+            raise e
 
 class MatchesNothing():
     '''Fake regexp object that matches nothing.

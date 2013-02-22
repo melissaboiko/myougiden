@@ -202,12 +202,16 @@ todo=None
 # just remove the file. so we create a new database, and move it over the old
 # one on success.
 PATHS['tmpdb'] = "%s.new.%d" % (PATHS['database'], os.getpid())
-
+to_delete = []
 # if problems are found, we just delete the temp database.
 def cleanup():
     # sqlite creates "dbname-journal" files
     for path in glob(PATHS['tmpdb'] + '*'):
         os.remove(path)
+    for f in to_delete:
+        if os.path.isfile(f):
+            os.remove(f)
+
 atexit.register(cleanup)
 
 def sigcleanup(signum, stack):
@@ -532,6 +536,79 @@ def make_database(jmdict, sqlite, progress=True):
     con.commit()
     con.close()
 
+def gzip_file(fpath):
+    try:
+        st = subprocess.call(['gzip', fpath])
+        if st != 0:
+            raise RuntimeError("gzip returned %d" % st)
+    except OSError:
+        bufsize = 1024*8
+        plain = open(fpath, 'rb')
+        gz = gzip.open(fpath + '.gz', 'wb')
+
+        while 1:
+            buf = plain.read(bufsize)
+            if not buf:
+                break
+            gz.write(buf)
+
+        plain.close()
+        gz.close()
+        os.remove(fpath)
+
+def gunzip_file(fpathgz):
+    try:
+        st = subprocess.call(['gzip', '-d', fpathgz])
+        if st != 0:
+            raise RuntimeError("gzip -d returned %d" % st)
+    except OSError:
+        bufsize = 1024*8
+        gz = gzip.open(fpathgz, 'rb')
+        plain = open(re.sub(r'\.gz$', '', fpathgz), 'wb')
+
+        while 1:
+            buf = gz.read(bufsize)
+            if not buf:
+                break
+            plain.write(buf)
+
+        plain.close()
+        gz.close()
+        os.remove(fpathgz)
+
+def fetch_jmdict_xml(localgz, update=True):
+    localgz = os.path.realpath(localgz)
+
+    if update and os.path.isfile(localgz):
+        if re.search(r'\.gz$', localgz):
+            localxml = re.sub(r'\.gz$', '', localgz)
+        else:
+            raise ValueError('not a .gz file: ' + localgz)
+
+        try:
+            print('Syncing file %s from %s' % (localgz, PATHS['jmdict_rsync_url']))
+            gunzip_file(localgz)
+            st = subprocess.call(['rsync', '--progress', '-v', '-z', PATHS['jmdict_rsync_url'], localxml])
+            if st != 0:
+                raise RuntimeError("rsync returned %d" % st)
+            gzip_file(localxml)
+        except Exception as e:
+            if os.path.isfile(localxml):
+                os.remove(localxml)
+
+            print('Could not update JMdict file: %s' % str(e))
+            print('Will try to download entire file from %s ...'
+                  % PATHS['jmdictgz_http_url'])
+
+            urllib.request.urlretrieve(PATHS['jmdictgz_http_url'], localgz)
+
+    else:
+        mkdir_p(os.path.dirname(localgz))
+
+        print('Downloading dictionary data from %s to %s ...'
+              % (PATHS['jmdictgz_http_url'], localgz))
+        urllib.request.urlretrieve(PATHS['jmdictgz_http_url'], localgz)
+
 
 if __name__ == '__main__':
     import argparse
@@ -539,7 +616,7 @@ if __name__ == '__main__':
 
     ap.add_argument('-f', '--fetch', action='store_true',
                     help=('''Try to fetch JMdict_e.gz from
-%s .''' % PATHS['jmdict_url']))
+%s .''' % PATHS['jmdictgz_http_url']))
 
     ap.add_argument('-k', '--keep', action='store_true',
                     help='''Keep downloaded JMdict_e.gz file after fetching.  If
@@ -559,60 +636,59 @@ not set, it will be automatically deleted after use.''')
     if args.nice:
         nice_self()
 
-    localjm_exists = os.path.isfile(args.jmdict)
+    localxml_exists = os.path.isfile(args.jmdict)
+    temp_xml = False
 
-    if args.fetch and not args.keep and localjm_exists:
-        # assume no one wants to keep old versions around
-        print("WARNING: Local JMdict exists at %s ." % args.jmdict)
-        print("         Will overwrite it with new version.")
+    if args.fetch and not args.keep and localxml_exists:
+        # if they're keeping the file, they probably don't want to delete it.
+        print("INFO: Local JMdict exists at %s ." % args.jmdict)
+        print("      Will update and keep it.")
         args.keep = True
 
-    if not localjm_exists and not args.fetch:
+    if not localxml_exists and not args.fetch:
         # assume no one would want to call the script just to be told
         # "there's no file, please fetch"
         args.fetch = True
 
     if args.fetch and not args.keep:
-        jmdesc = "temporary file"
+        temp_xml = True
 
         # it seems that both gzip and urllib require visible filenames, and
         # can't just work with in-memory file objects.
-        f, jmpath = tempfile.mkstemp()
+        f, xmlgzpath = tempfile.mkstemp()
+        to_delete.append(xmlgzpath)
     else:
-        jmdesc = args.jmdict
-        jmpath = jmdesc
+        xmlgzpath = args.jmdict
 
-        dirname = os.path.dirname(jmpath)
-        if len(dirname) > 0:
-            mkdir_p(dirname)
-
-    temps = glob(PATHS['database'] + '.new.*')
-    if temps:
-        for temp in temps:
-            m = re.match(PATHS['database'] + '.new.([0-9]*)', temp)
-            pid = int(m.group(1))
-            try:
-                os.getpgid(pid)
-                # weakness: if another process takes over same PID
-                print("updatedb-myougiden seems to be running at PID %d! Exiting..."
-                        % pid)
-                sys.exit(0)
-            except OSError:
-                print("Removing stale file %s" % temp)
-                os.remove(temp)
+    # check for already running process & leftovers
+    updating_files = glob(PATHS['database'] + '.new.*')
+    for uf in updating_files:
+        m = re.match(PATHS['database'] + '.new.([0-9]*)', uf)
+        pid = int(m.group(1))
+        try:
+            os.getpgid(pid)
+            # weakness: if another process takes over same PID.
+            print("updatedb-myougiden seems to be running at PID %d! Exiting..."
+                  % pid)
+            sys.exit(0)
+        except OSError:
+            print("Removing stale file %s" % uf)
+            os.remove(uf)
 
     if args.fetch:
-        print("Fetching %s to %s, please wait..." % (PATHS['jmdict_url'], jmdesc))
-        urllib.request.urlretrieve(PATHS['jmdict_url'], jmpath)
+        fetch_jmdict_xml(xmlgzpath, update=(not temp_xml))
 
-    print("Compiling database from %s, please wait..." % jmdesc)
+    if temp_xml:
+        print("Compiling database from temporary file, please wait...")
+    else:
+        print("Compiling database from %s, please wait..." % xmlgzpath)
 
     progress = sys.stdout.isatty()
-    make_database(gzip.open(jmpath, 'r'), PATHS['tmpdb'], progress=progress)
+    make_database(gzip.open(xmlgzpath, 'r'), PATHS['tmpdb'], progress=progress)
 
-    if args.fetch and not args.keep:
-        print("Deleting %s." % jmdesc)
-        os.remove(jmpath)
+    if temp_xml:
+        print("Deleting temporary file.")
+        os.remove(xmlgzpath)
 
     os.rename(PATHS['tmpdb'], PATHS['database'])
     atexit.unregister(cleanup)
