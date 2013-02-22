@@ -218,6 +218,7 @@ def version(cur):
 myougiden version %s , database v. %s
 JMdict last modified %s
 Python version %s (%s)
+Prefix: %s
 
 Libraries:
   romkan: %s
@@ -235,6 +236,8 @@ External programs:
     fmt(jmdict_mtime, 'parameter'),
     fmt(platform.python_version(), 'parameter'),
     fmt(platform.platform(), 'parameter'),
+
+    fmt(config['paths']['prefix'], 'parameter'),
 
     fmt(romkan.__version__, 'parameter'),
     # fmt(termcolor.__version__, 'parameter'),
