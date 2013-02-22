@@ -29,7 +29,10 @@
    - names (JMnedict)?
    - famous people/place names from wikipedia etc?
 
+ - code cleaning:
    - use datafile to store version, paths etc.
+   - centralize color logic
+   - it's probably time to expand myougiden.py into more than one file...
 
  - output:
    - color outputs:
