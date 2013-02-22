@@ -32,7 +32,7 @@
    - use datafile to store version, paths etc.
 
  - output:
-   - color output:
+   - color outputs:
      - light background mode
    - better wrapping for "human" output
    - auto-pager

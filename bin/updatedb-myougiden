@@ -10,6 +10,7 @@ import time
 import urllib.request
 import xml.parsers.expat
 import subprocess
+import termcolor
 
 import sqlite3 as sql
 from glob import glob
@@ -193,6 +194,17 @@ short_expansions = {
 #
 # used to un-expand entities.
 long_expansions={}
+
+# don't you love globals
+usecolor=False
+def coloredp(text, color=None, on_color=None, attrs=None):
+    if usecolor:
+        return termcolor.colored(text, color, on_color, attrs)
+    else:
+        return text
+
+def coloredpb(string, color):
+    return coloredp(string, color, None, ["bold"])
 
 # used for progress bar
 donecount=0
@@ -379,18 +391,22 @@ def count_entries(jmdict):
 
 
 # credits for ascii art: Dan Strychalski
-coffee = []
-coffee.append('''
+# (  
+#  )
+#c[ ]
+
+coffeecup = 'c[ ]'
+coffeesteam = []
+coffeesteam.append('''
  (  
   )
-c[ ]
-'''.strip("\n"))
+'''.lstrip("\n"))
 
-coffee.append('''
+coffeesteam.append('''
    )
-  ( 
-c[ ]
-'''.strip("\n"))
+  (
+'''.lstrip("\n"))
+
 animation_frame = 0
 
 def print_coffee():
@@ -398,18 +414,34 @@ def print_coffee():
     global todo
     global animation_frame
 
-    sys.stdout.write(coffee[animation_frame])
+    perc = float(donecount) / todo
+
+    if perc == 1:
+        color = 'cyan'
+    elif perc >= 0.66:
+        color = 'blue'
+    elif perc >= 0.33:
+        color = 'yellow'
+    else:
+        color = 'red'
+
+    sys.stdout.write(coffeesteam[animation_frame])
+    sys.stdout.write(coloredpb(coffeecup, color))
+    animation_frame = (animation_frame+1) % len(coffeesteam)
+
+    # 6: hardcoded len(str(todo))
+    donestr = coloredpb("%6d" % donecount, color)
+    todostr = coloredpb("%6d" % todo, 'magenta')
+    percstr = coloredpb("%2.2f" % (perc*100), color)
 
     if donecount == todo:
-        print(" %d/%d (100%%) All done!" %
-              (donecount, todo))
+        print(" %s/%s (%s%%) All done!" %
+              (donestr, todostr, percstr))
     else:
-        # 6: hardcoded len(str(todo))
-        print(" %6d/%d (%2.2f%%) done..." %
-              (donecount, todo, (float(donecount)/todo)*100))
+        print(" %s/%s (%s%%) done..." %
+              (donestr, todostr, percstr))
 
     sys.stdout.flush()
-    animation_frame = (animation_frame+1) % len(coffee)
 
 def update_coffee(signum=None, frame=None):
     '''Handler for SIGALARM.'''
@@ -524,7 +556,7 @@ def make_database(jmdict, sqlite, progress=True):
         sys.stdout.write("Counting entries...")
         todo = count_entries(jmdict)
         jmdict.seek(0)
-        print(" %s to do." % todo)
+        print(" %s to do." % coloredpb(str(todo), 'magenta'))
 
         print_coffee()
         signal.signal(signal.SIGALRM, update_coffee)
@@ -538,7 +570,7 @@ def make_database(jmdict, sqlite, progress=True):
 
 def gzip_file(fpath):
     try:
-        st = subprocess.call(['gzip', fpath])
+        st = subprocess.call(['gzip', '-f', fpath])
         if st != 0:
             raise RuntimeError("gzip returned %d" % st)
     except OSError:
@@ -558,7 +590,7 @@ def gzip_file(fpath):
 
 def gunzip_file(fpathgz):
     try:
-        st = subprocess.call(['gzip', '-d', fpathgz])
+        st = subprocess.call(['gzip', '-d', '-f', fpathgz])
         if st != 0:
             raise RuntimeError("gzip -d returned %d" % st)
     except OSError:
@@ -586,7 +618,11 @@ def fetch_jmdict_xml(localgz, update=True):
             raise ValueError('not a .gz file: ' + localgz)
 
         try:
-            print('Syncing file %s from %s' % (localgz, PATHS['jmdict_rsync_url']))
+            print('%s file %s from %s' % (
+                coloredp('Syncing', 'magenta'),
+                coloredp(localgz, 'green'),
+                coloredp(PATHS['jmdict_rsync_url'], 'green')))
+
             gunzip_file(localgz)
             st = subprocess.call(['rsync', '--progress', '-v', '-z', PATHS['jmdict_rsync_url'], localxml])
             if st != 0:
@@ -596,17 +632,23 @@ def fetch_jmdict_xml(localgz, update=True):
             if os.path.isfile(localxml):
                 os.remove(localxml)
 
-            print('Could not update JMdict file: %s' % str(e))
-            print('Will try to download entire file from %s ...'
-                  % PATHS['jmdictgz_http_url'])
+            print('%s: Could not update JMdict file: %s' % (
+                coloredp('ERROR', 'red'),
+                coloredp(str(e), 'red')));
+
+            print('Will try to %s from %s ...' % (
+                coloredp('download entire file', 'magenta'),
+                coloredp(PATHS['jmdictgz_http_url'], 'green')))
 
             urllib.request.urlretrieve(PATHS['jmdictgz_http_url'], localgz)
 
     else:
         mkdir_p(os.path.dirname(localgz))
 
-        print('Downloading dictionary data from %s to %s ...'
-              % (PATHS['jmdictgz_http_url'], localgz))
+        print('%s full dictionary data from %s to %s ...' % (
+            coloredp('Downloading', 'magenta'),
+            coloredp(PATHS['jmdictgz_http_url'], 'green'),
+            coloredp(localgz, 'green')))
         urllib.request.urlretrieve(PATHS['jmdictgz_http_url'], localgz)
 
 
@@ -628,6 +670,10 @@ not set, it will be automatically deleted after use.''')
                     help='''Path of local JMdict_e.gz file. Default:
 %(default)s .''')
 
+    ap.add_argument('-c', '--color', choices=('yes', 'no', 'auto'), default='auto',
+                    help='''Whether to colorize output.  Default 'auto' means to
+colorize if writing to a terminal.''')
+
     ap.add_argument('--no-nice', action='store_false', dest='nice',
             help='''Don't lower process priority (default: try to be nice).''')
 
@@ -639,9 +685,17 @@ not set, it will be automatically deleted after use.''')
     localxml_exists = os.path.isfile(args.jmdict)
     temp_xml = False
 
+    if args.color == 'auto':
+        if sys.stdout.isatty():
+            args.color = 'yes'
+        else:
+            args.color = 'no'
+    if args.color == 'yes': usecolor = True
+
     if args.fetch and not args.keep and localxml_exists:
         # if they're keeping the file, they probably don't want to delete it.
-        print("INFO: Local JMdict exists at %s ." % args.jmdict)
+        print("%s: Local JMdict exists at %s ." % (
+            coloredp('INFO', 'magenta'), args.jmdict))
         print("      Will update and keep it.")
         args.keep = True
 
@@ -668,20 +722,30 @@ not set, it will be automatically deleted after use.''')
         try:
             os.getpgid(pid)
             # weakness: if another process takes over same PID.
-            print("updatedb-myougiden seems to be running at PID %d! Exiting..."
-                  % pid)
+            print(
+                "%s: updatedb-myougiden seems to be running at PID %s! Exiting..."
+                % (coloredp('ERROR', 'red'),
+                   coloredp(str(pid), 'green'))
+            )
+
             sys.exit(0)
         except OSError:
-            print("Removing stale file %s" % uf)
+            print("%s %s" % (
+                coloredp('Removing stale file', 'magenta'),
+                coloredp(uf, 'green')))
             os.remove(uf)
 
     if args.fetch:
         fetch_jmdict_xml(xmlgzpath, update=(not temp_xml))
 
     if temp_xml:
-        print("Compiling database from temporary file, please wait...")
+        print("%s from %s, please wait..." % (
+            coloredp('Compiling database', 'magenta'),
+            coloredp('temporary file', 'green')))
     else:
-        print("Compiling database from %s, please wait..." % xmlgzpath)
+        print("%s from %s, please wait..." % (
+            coloredp('Compiling database', 'magenta'),
+            coloredp(xmlgzpath, 'green')))
 
     progress = sys.stdout.isatty()
     make_database(gzip.open(xmlgzpath, 'r'), PATHS['tmpdb'], progress=progress)
