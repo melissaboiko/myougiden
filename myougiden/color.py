@@ -71,7 +71,10 @@ def color_regexp(reg_obj, longstring, base_style=None):
 
     m = reg_obj.search(longstring)
     if not m:
-        return longstring
+        if base_style:
+            return fmt(longstring, base_style)
+        else:
+            return longstring
     else:
         head = longstring[:m.start()]
         tail = longstring[m.end():]
