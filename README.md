@@ -45,9 +45,9 @@ Then install myougiden using pip:
 
 Then, you need to compile the dictionary database at least once:
 
-    # This command downloads and compile JMdict. It's a bit heavy...
     $ sudo updatedb-myougiden -f
-    # go have some coffee...
+    # This command downloads and compile JMdict.
+    # It's a bit heavy, go have some coffee...
 
 That's it, have fun!
 
