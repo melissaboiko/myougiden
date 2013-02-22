@@ -11,14 +11,6 @@ from myougiden.color import fmt, colorize_data
 
 import myougiden
 
-PATHS = {}
-
-PATHS['sharedir'] = os.path.join(config['paths']['prefix'], 'share', 'myougiden')
-PATHS['database'] = os.path.join(PATHS['sharedir'], 'jmdict.sqlite')
-PATHS['jmdictgz_http_url'] = 'http://ftp.monash.edu.au/pub/nihongo/JMdict_e.gz'
-PATHS['jmdict_rsync_url'] = 'rsync://ftp.monash.edu.au/nihongo/JMdict_e'
-
-
 # from http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
 # convenience function because python < 3.2 has no exist_ok
 def mkdir_p(path):
