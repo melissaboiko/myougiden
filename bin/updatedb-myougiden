@@ -17,6 +17,7 @@ from glob import glob
 from myougiden import config
 from myougiden import color
 from myougiden import common
+from myougiden.orm import Entry, Kanji, Reading, Sense
 from myougiden.color import fmt
 
 # JMdict expansions are too damn long
@@ -445,9 +446,15 @@ def make_database(jmdict, sqlite, progress=True):
 
     common.mkdir_p(os.path.dirname(config['paths']['database']))
 
-    ent_seq = None
-    sense_id = None
-    cdata = None
+
+    class Buffer:
+        pass
+    b = Buffer()
+    b.entry = None
+    b.kanji = None
+    b.reading = None
+    b.sense = None
+    b.cdata = ''
 
     def handle_entity_decl(name,
             is_parameter_entity,
@@ -463,64 +470,106 @@ def make_database(jmdict, sqlite, progress=True):
                  VALUES (?, ?, ?);
         ''', [name, short_expansions[name], value])
 
+
+
     def handle_start_el(el, attrs):
-        nonlocal ent_seq
-        nonlocal sense_id
-        nonlocal cdata
+        nonlocal b
 
-        cdata = ''
+        b.cdata = ''
 
-        if el == 'sense':
-            cur.execute('INSERT INTO senses(ent_seq) VALUES (?);', [ent_seq])
-            cur.execute('SELECT max(id) FROM senses;')
-            sense_id = cur.fetchone()[0]
+        if el == 'entry':
+            b.entry = Entry(frequent=False)
+        elif el == 'k_ele':
+            b.kanji = Kanji()
+        elif el == 'r_ele':
+            b.reading = Reading()
+        elif el == 'sense':
+            b.sense = Sense()
 
     def handle_cdata(data):
-        nonlocal cdata
-        cdata += data
+        nonlocal b
+        b.cdata += data
 
     def handle_end_el(el):
-        nonlocal ent_seq
-        nonlocal sense_id
-        nonlocal cdata
+        nonlocal b
         nonlocal progress
         global donecount
 
         if el == 'ent_seq':
-            ent_seq = cdata
-            cur.execute('INSERT INTO entries(ent_seq) VALUES (?);', [ent_seq])
-            if progress:
-                donecount += 1
+            b.entry.ent_seq = int(b.cdata)
 
         elif el == 'reb':
-            cur.execute('INSERT INTO readings(ent_seq, reading) VALUES (?, ?);',
-                    [ent_seq, cdata])
+            b.reading.text = b.cdata
 
         elif el == 'keb':
-            cur.execute('INSERT INTO kanjis(ent_seq, kanji) VALUES (?, ?);',
-                    [ent_seq, cdata])
+            b.kanji.text = b.cdata
 
         elif el in ('ke_pri', 're_pri'):
-            if cdata in ('news1', 'ichi1', 'spec1', 'gai1'):
-                cur.execute('UPDATE entries SET frequent = 1 WHERE ent_seq = ?;', [ent_seq])
+            if b.cdata in ('news1', 'ichi1', 'spec1', 'gai1'):
+                b.entry.frequent = True
 
         elif el in ('pos', 'misc', 'dial'):
             for abr, exp in long_expansions.items():
-                if cdata == exp:
+                if b.cdata == exp:
                     abbrev = abr
                     break
-
-            cur.execute('UPDATE senses SET %s = ? WHERE id = ?;' % el,
-                    [abbrev, sense_id])
+            setattr(b.sense, el, abbrev)
 
         elif el == 's_inf':
-            cur.execute('UPDATE senses SET s_inf = ? WHERE id = ?;',
-                        [cdata, sense_id])
-
+            b.sense.s_inf = b.cdata
 
         elif el == 'gloss':
-            cur.execute('INSERT INTO glosses(sense_id, gloss) VALUES (?, ?);',
-                    [sense_id, cdata])
+            b.sense.glosses.append(b.cdata)
+
+        elif el == 'k_ele':
+            b.entry.kanjis.append(b.kanji)
+        elif el == 'r_ele':
+            b.entry.readings.append(b.reading)
+        elif el == 'sense':
+            b.entry.senses.append(b.sense)
+
+        elif el == 'entry':
+            cur.execute('''INSERT INTO entries (ent_seq, frequent)
+                        VALUES (?, ?);''', [b.entry.ent_seq, b.entry.frequent])
+
+            for reading in b.entry.readings:
+                cur.execute('''INSERT INTO readings (ent_seq, reading)
+                            VALUES (?, ?);''', [b.entry.ent_seq, reading.text])
+
+            for kanji in b.entry.kanjis:
+                cur.execute('''INSERT INTO kanjis (ent_seq, kanji)
+                            VALUES (?, ?);''', [b.entry.ent_seq, kanji.text])
+
+            for sense in b.entry.senses:
+                cur.execute('''INSERT INTO senses
+                            (ent_seq, pos, misc, dial, s_inf)
+                             VALUES (?, ?, ?, ?, ?)''',
+                            [b.entry.ent_seq,
+                             sense.pos,
+                             sense.misc,
+                             sense.dial,
+                             sense.s_inf])
+                cur.execute('''SELECT max(id) FROM senses;''')
+                sense_id = cur.fetchone()[0]
+                for gloss in sense.glosses:
+                    cur.execute('''INSERT INTO glosses (sense_id, gloss)
+                                VALUES (?, ?)''',
+                                [sense_id, gloss])
+            del b.entry
+            del b.reading
+            del b.kanji
+            del b.sense
+            del b.cdata
+
+            b.entry = None
+            b.reading = None
+            b.kanji = None
+            b.sense = None
+            b.cdata = ''
+
+            if progress:
+                donecount += 1
+
 
     p = xml.parsers.expat.ParserCreate()
     p.buffer_text = True

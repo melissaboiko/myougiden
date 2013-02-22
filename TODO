@@ -6,11 +6,12 @@
  - data:
    - more JMdict fields?
      - reproduce everything in EDICT at the very least.
+     - re_nokanji (how?)
 
    - clean abbreviations that are not being used
 
    - don't be entry-centric
-     - more fine-grained --frequent
+     - more fine-grained --frequent (ke_pri, re_pri)
      - support re_restr in readings
      - support stagk, stagr in sense
 
