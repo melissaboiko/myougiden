@@ -5,9 +5,9 @@ import re
 import romkan
 import configparser
 
-from termcolor import *
 from myougiden import *
 from myougiden.texttools import *
+from myougiden.color import fmt, colorize_data
 
 import myougiden
 
@@ -59,9 +59,7 @@ class Sense():
         self.s_inf = s_inf
         self.glosses = glosses or list()
 
-        self.color=False
-
-    def tagstr(self, color=False):
+    def tagstr(self):
         '''Return a string with all information tags.'''
 
         tagstr = ''
@@ -78,99 +76,12 @@ class Sense():
                 tagstr += ' '
             tagstr += '[%s]' % self.s_inf
 
-        if color and len(tagstr) > 0:
-            return fmt(tagstr, 'subdue')
-        else:
-            return tagstr
+        return fmt(tagstr, 'subdue')
 
-
-# style : args
-# *args as for colored()
-FORMATTING={
-        # color problems:
-        # - japanese bitmap fonts are kinda crummy in bold
-        # - non-bold gray doesn't even show in my dark xterm
-        # - green/red is the most common color blindness
-        # - it's very hard to impossible to detect if bg is dark or light
-        # - cyan is better for dark bg, blue for light
-
-        'reading': ('magenta', None, None),
-
-        'kanji': ('cyan', None, None),
-
-        # default
-        # 'gloss':
-
-        'misc': ('green', None, None),
-        'highlight': ('green', None, ['bold']),
-
-        'subdue': ('yellow', None, None),
-
-        'match': ('red', None, None),
-
-}
-
-def fmt(string, style):
-    return colored(string, *(FORMATTING[style]))
-
-def color_regexp(reg_obj, longstring, base_style=None):
-    '''Search regexp in longstring; return longstring with match colored.'''
-
-    m = reg_obj.search(longstring)
-    if not m:
-        return longstring
-    else:
-        head = longstring[:m.start()]
-        tail = longstring[m.end():]
-        if base_style:
-            head = fmt(head, base_style)
-            tail = fmt(tail, base_style)
-        return head + fmt(m.group(), 'match') + tail
-
-
-def colorize_data(kanjis, readings, senses, search_params):
-    '''Colorize matched data according to search parameters.
-
-    search_params: A dictionary of arguments like those of search_by().
-    '''
-
-    # TODO: there's some duplication between this logic and search_by()
-
-    # regexp to match whatever the query matched
-    reg = search_params['query']
-    if not search_params['regexp']:
-        reg = re.escape(reg)
-
-    if search_params['extent'] == 'whole':
-        reg = '^' + reg + '$'
-    elif search_params['extent'] == 'word':
-        reg = r'\b' + reg + r'\b'
-
-    if search_params['case_sensitive']:
-        reg = get_regexp(reg, 0)
-    else:
-        reg = get_regexp(reg, re.I)
-
-
-    if search_params['field'] == 'reading':
-        readings = [color_regexp(reg, r, 'reading') for r in readings]
-        kanjis = [fmt(k, 'kanji') for k in kanjis]
-    elif search_params['field'] == 'kanji':
-        readings = [fmt(k, 'reading') for k in readings]
-        kanjis = [color_regexp(reg, k, 'kanji') for k in kanjis]
-    elif search_params['field'] == 'gloss':
-        readings = [fmt(k, 'reading') for k in readings]
-        kanjis = [fmt(k, 'kanji') for k in kanjis]
-
-        for sense in senses:
-            sense.glosses = [color_regexp(reg, g) for g in sense.glosses]
-
-    return (kanjis, readings, senses)
 
 # this thing really needs to be better thought of
 def format_entry_tsv(kanjis, readings, senses, is_frequent,
                      search_params,
-                     color=False,
                      romajifn=None):
     # as of 2012-02-21, no reading or kanji field uses full-width semicolon
     sep_full = '；'
@@ -188,12 +99,11 @@ def format_entry_tsv(kanjis, readings, senses, is_frequent,
     if is_frequent:
         freqmark = '(P)'
 
-    if color:
-        sep_full = fmt(sep_full, 'subdue')
-        sep_half = fmt(sep_half, 'subdue')
-        if is_frequent:
-            freqmark = fmt(freqmark, 'highlight')
-        kanjis, readings, senses = colorize_data(kanjis, readings, senses, search_params)
+    sep_full = fmt(sep_full, 'subdue')
+    sep_half = fmt(sep_half, 'subdue')
+    if is_frequent:
+        freqmark = fmt(freqmark, 'highlight')
+    kanjis, readings, senses = colorize_data(kanjis, readings, senses, search_params)
 
     if romajifn:
         readings = [romajifn(r) for r in readings]
@@ -202,7 +112,7 @@ def format_entry_tsv(kanjis, readings, senses, is_frequent,
 
     s += "%s\t%s" % (sep_full.join(readings), sep_full.join(kanjis))
     for sense in senses:
-        tagstr = sense.tagstr(color=color)
+        tagstr = sense.tagstr()
         if tagstr: tagstr += ' '
 
         s += "\t%s%s" % (tagstr, sep_half.join(sense.glosses))
@@ -214,7 +124,6 @@ def format_entry_tsv(kanjis, readings, senses, is_frequent,
 
 def format_entry_human(kanjis, readings, senses, is_frequent,
                        search_params,
-                       color=True,
                        romajifn=None):
     sep_full = '；'
     sep_half = '; '
@@ -222,13 +131,12 @@ def format_entry_human(kanjis, readings, senses, is_frequent,
     if is_frequent:
         freqmark = '※'
 
-    if color:
-        sep_full = fmt(sep_full, 'subdue')
-        sep_half = fmt(sep_half, 'subdue')
+    sep_full = fmt(sep_full, 'subdue')
+    sep_half = fmt(sep_half, 'subdue')
 
-        if is_frequent:
-            freqmark = fmt(freqmark, 'highlight')
-        kanjis, readings, senses = colorize_data(kanjis, readings, senses, search_params)
+    if is_frequent:
+        freqmark = fmt(freqmark, 'highlight')
+    kanjis, readings, senses = colorize_data(kanjis, readings, senses, search_params)
 
     if romajifn:
         readings = [romajifn(r) for r in readings]
@@ -246,10 +154,9 @@ def format_entry_human(kanjis, readings, senses, is_frequent,
 
     for sensenum, sense in enumerate(senses, start=1):
         sn = str(sensenum) + '.'
-        if color:
-            sn = fmt(sn, 'misc')
+        sn = fmt(sn, 'misc')
 
-        tagstr = sense.tagstr(color=color)
+        tagstr = sense.tagstr()
         if tagstr: tagstr += ' '
 
         s += "\n%s %s%s" % (sn, tagstr, sep_half.join(sense.glosses))
@@ -397,13 +304,12 @@ def short_expansion(cur, abbrev):
     else:
         return None
 
-def abbrev_line(cur, abbrev, color=True):
+def abbrev_line(cur, abbrev):
     exp = short_expansion(cur, abbrev)
-    if color:
-        abbrev = fmt(abbrev, 'subdue')
+    abbrev = fmt(abbrev, 'subdue')
     return "%s\t%s" % (abbrev, exp)
 
-def abbrevs_table(cur, color=True):
+def abbrevs_table(cur):
     cur.execute('''
     SELECT abbrev
     FROM abbreviations
@@ -413,4 +319,4 @@ def abbrevs_table(cur, color=True):
     abbrevs=[]
     for row in cur.fetchall():
         abbrevs.append(row[0])
-    return "\n".join([abbrev_line(cur, abbrev, color) for abbrev in abbrevs])
+    return "\n".join([abbrev_line(cur, abbrev) for abbrev in abbrevs])

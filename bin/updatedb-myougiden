@@ -19,11 +19,15 @@ try:
     from myougiden.common import *
     from myougiden.database import *
     from myougiden.texttools import *
+    from myougiden.color import fmt, color_percent
+    import myougiden.color
 except ImportError:
     sys.path.append('.')
     from myougiden.common import *
     from myougiden.database import *
     from myougiden.texttools import *
+    from myougiden.color import fmt, color_percent
+    import myougiden.color
 
 # JMdict expansions are too damn long
 short_expansions = {
@@ -198,17 +202,6 @@ short_expansions = {
 #
 # used to un-expand entities.
 long_expansions={}
-
-# don't you love globals
-usecolor=False
-def coloredp(text, color=None, on_color=None, attrs=None):
-    if usecolor:
-        return termcolor.colored(text, color, on_color, attrs)
-    else:
-        return text
-
-def coloredpb(string, color):
-    return coloredp(string, color, None, ["bold"])
 
 # used for progress bar
 donecount=0
@@ -422,23 +415,14 @@ def print_coffee():
 
     perc = float(donecount) / todo
 
-    if perc == 1:
-        color = 'cyan'
-    elif perc >= 0.66:
-        color = 'blue'
-    elif perc >= 0.33:
-        color = 'yellow'
-    else:
-        color = 'red'
-
     sys.stdout.write(coffeesteam[animation_frame])
-    sys.stdout.write(coloredpb(coffeecup, color))
+    sys.stdout.write(color_percent(coffeecup, perc))
     animation_frame = (animation_frame+1) % len(coffeesteam)
 
     # 6: hardcoded len(str(todo))
-    donestr = coloredpb("%6d" % donecount, color)
-    todostr = coloredpb("%6d" % todo, 'magenta')
-    percstr = coloredpb("%2.2f" % (perc*100), color)
+    donestr = color_percent("%6d" % donecount, perc)
+    todostr = fmt("%6d" % todo, 'info')
+    percstr = color_percent("%2.2f" % (perc*100), perc)
 
     if donecount == todo:
         print(" %s/%s (%s%%) All done!" %
@@ -553,7 +537,7 @@ def make_database(jmdict, sqlite, progress=True):
     # it does nothing!
     # p.SetParamEntityParsing(xml.parsers.expat.XML_PARAM_ENTITY_PARSING_NEVER)
 
-    con = sql.connect(config['paths']['tmpdb'], isolation_level='IMMEDIATE')
+    con = sql.connect(tmpdb, isolation_level='IMMEDIATE')
     cur = con.cursor()
 
     create_tables(cur)
@@ -562,7 +546,7 @@ def make_database(jmdict, sqlite, progress=True):
         sys.stdout.write("Counting entries...")
         todo = count_entries(jmdict)
         jmdict.seek(0)
-        print(" %s to do." % coloredpb(str(todo), 'magenta'))
+        print(" %s to do." % fmt(str(todo), 'info'))
 
         print_coffee()
         signal.signal(signal.SIGALRM, update_coffee)
@@ -627,13 +611,13 @@ def fetch_jmdict_xml(localgz):
 
         try:
             print('%s remote file %s to %s' % (
-                coloredp('Syncing', 'magenta'),
-                coloredp(config['paths']['jmdict_rsync_url'], 'green'),
-                coloredp(localgz, 'green'),
+                fmt('Syncing', 'info'),
+                fmt(config['urls']['jmdict_rsync'], 'parameter'),
+                fmt(localgz, 'parameter'),
             ))
 
             gunzip_file(localgz)
-            st = subprocess.call(['rsync', '--progress', '-v', '-z', config['paths']['jmdict_rsync_url'], localxml])
+            st = subprocess.call(['rsync', '--progress', '-v', '-z', config['urls']['jmdict_rsync'], localxml])
             if st != 0:
                 raise RuntimeError("rsync returned %d" % st)
             gzip_file(localxml)
@@ -642,23 +626,23 @@ def fetch_jmdict_xml(localgz):
                 os.remove(localxml)
 
             print('%s: Could not update JMdict file: %s' % (
-                coloredp('ERROR', 'red'),
-                coloredp(str(e), 'red')));
+                fmt('ERROR', 'error'),
+                fmt(str(e), 'error')));
 
             print('Will try to %s from %s ...' % (
-                coloredp('download entire file', 'magenta'),
-                coloredp(config['paths']['jmdictgz_http_url'], 'green')))
+                fmt('download entire file', 'info'),
+                fmt(config['urls']['jmdictgz_http'], 'parameter')))
 
-            urllib.request.urlretrieve(config['paths']['jmdictgz_http_url'], localgz)
+            urllib.request.urlretrieve(config['urls']['jmdictgz_http'], localgz)
 
     else:
         mkdir_p(os.path.dirname(localgz))
 
         print('%s full dictionary data from %s to %s ...' % (
-            coloredp('Downloading', 'magenta'),
-            coloredp(config['paths']['jmdictgz_http_url'], 'green'),
-            coloredp(localgz, 'green')))
-        urllib.request.urlretrieve(config['paths']['jmdictgz_http_url'], localgz)
+            fmt('Downloading', 'info'),
+            fmt(config['urls']['jmdictgz_http'], 'parameter'),
+            fmt(localgz, 'parameter')))
+        urllib.request.urlretrieve(config['urls']['jmdictgz_http'], localgz)
 
 
 if __name__ == '__main__':
@@ -667,7 +651,7 @@ if __name__ == '__main__':
 
     ap.add_argument('-f', '--fetch', action='store_true',
                     help=('''Try to fetch JMdict_e.gz from
-%s .''' % config['paths']['jmdictgz_http_url']))
+%s .''' % config['urls']['jmdictgz_http']))
 
     ap.add_argument('-k', '--delete', action='store_true',
                     help='''Delete downloaded JMdict_e.gz file after fetching.
@@ -699,7 +683,7 @@ colorize if writing to a terminal.''')
             args.color = 'yes'
         else:
             args.color = 'no'
-    if args.color == 'yes': usecolor = True
+    if args.color == 'yes': myougiden.color.use_color = True
 
     if not localxml_exists and not args.fetch:
         # assume no one would want to call the script just to be told
@@ -724,15 +708,15 @@ colorize if writing to a terminal.''')
             # weakness: if another process takes over same PID.
             print(
                 "%s: updatedb-myougiden seems to be running at PID %s! Exiting..."
-                % (coloredp('ERROR', 'red'),
-                   coloredp(str(pid), 'green'))
+                % (fmt('ERROR', 'error'),
+                   fmt(str(pid), 'parameter'))
             )
 
             sys.exit(0)
         except OSError:
             print("%s %s" % (
-                coloredp('Removing stale file', 'magenta'),
-                coloredp(uf, 'green')))
+                fmt('Removing stale file', 'info'),
+                fmt(uf, 'parameter')))
             os.remove(uf)
 
     if args.fetch:
@@ -740,12 +724,12 @@ colorize if writing to a terminal.''')
 
     if args.delete:
         print("%s from %s, please wait..." % (
-            coloredp('Compiling database', 'magenta'),
-            coloredp('temporary file', 'green')))
+            fmt('Compiling database', 'info'),
+            fmt('temporary file', 'parameter')))
     else:
         print("%s from %s, please wait..." % (
-            coloredp('Compiling database', 'magenta'),
-            coloredp(xmlgzpath, 'green')))
+            fmt('Compiling database', 'info'),
+            fmt(xmlgzpath, 'parameter')))
 
     progress = sys.stdout.isatty()
     make_database(gzip.open(xmlgzpath, 'r'), tmpdb, progress=progress)

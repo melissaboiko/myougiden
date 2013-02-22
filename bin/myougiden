@@ -8,11 +8,13 @@ try:
     from myougiden.common import *
     from myougiden.database import *
     from myougiden.texttools import *
+    import myougiden.color
 except ImportError:
     sys.path.append('.')
     from myougiden.common import *
     from myougiden.database import *
     from myougiden.texttools import *
+    import myougiden.color
 
 ap = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 
@@ -120,8 +122,7 @@ if args.color == 'auto':
     else:
         args.color = 'no'
 
-# convert to boolean
-args.color = args.color == 'yes'
+myougiden.color.use_color =  (args.color == 'yes')
 
 args.query = ' '.join(args.query)
 
@@ -157,10 +158,10 @@ you might want to add the update command to cron (for example, in
 
 # handle short commands first.
 if args.list_abbrevs:
-    print(abbrevs_table(cur, args.color))
+    print(abbrevs_table(cur))
     sys.exit(0)
 elif args.abbrev:
-    print(abbrev_line(cur, args.abbrev, args.color))
+    print(abbrev_line(cur, args.abbrev))
     sys.exit(0)
 
 # handle query guesswork
@@ -273,7 +274,6 @@ if chosen_search:
         print("\n\n".join([
             format_entry_human(*row,
                                search_params=chosen_search,
-                               color=args.color,
                                romajifn=args.out_romaji)
             for row in rows]))
 
@@ -281,7 +281,6 @@ if chosen_search:
         for row in [fetch_entry(cur, ent_seq) for ent_seq in entries]:
             print(format_entry_tsv(*row,
                                    search_params=chosen_search,
-                                   color=args.color,
                                    romajifn=args.out_romaji))
 else:
     sys.exit(1)
