@@ -245,7 +245,7 @@ def nice_self():
         except OSError:
             problem=True
 
-    return problem == False
+    return not problem 
 
 def create_tables(cur, jmdictxml):
     # what about a custom collation function?
