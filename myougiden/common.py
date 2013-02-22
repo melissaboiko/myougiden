@@ -7,7 +7,7 @@ import configparser
 
 from myougiden import *
 from myougiden.texttools import *
-from myougiden.color import fmt, colorize_data
+from myougiden.color import fmt
 
 import myougiden
 
@@ -26,176 +26,6 @@ def mkdir_p(path):
         else:
             raise e
 
-
-class Sense():
-    '''Attributes:
-    - glosses: a list of glosses.
-    - pos: part-of-speech.
-    - misc: other info, abbreviated.
-    - dial: dialect.
-    - s_inf: long case-by-case remarks.
-    - id: database ID.
-    '''
-
-    def __init__(self,
-                 id=None,
-                 pos=None,
-                 misc=None,
-                 dial=None,
-                 s_inf=None,
-                 glosses=None):
-        self.id = id
-        self.pos = pos
-        self.misc = misc
-        self.dial = dial
-        self.s_inf = s_inf
-        self.glosses = glosses or list()
-
-    def tagstr(self):
-        '''Return a string with all information tags.'''
-
-        tagstr = ''
-        tags = []
-        for attr in ('pos', 'misc', 'dial'):
-            tag = getattr(self, attr)
-            if tag:
-                tags.append(tag)
-        if len(tags) > 0:
-            tagstr += '[%s]' % (','.join(tags))
-
-        if self.s_inf:
-            if len(tagstr) > 0:
-                tagstr += ' '
-            tagstr += '[%s]' % self.s_inf
-
-        return fmt(tagstr, 'subdue')
-
-
-# this thing really needs to be better thought of
-def format_entry_tsv(kanjis, readings, senses, is_frequent,
-                     search_params,
-                     romajifn=None):
-    # as of 2012-02-21, no reading or kanji field uses full-width semicolon
-    sep_full = '；'
-
-    # as of 2012-02-21, only one entry uses '|' .
-    # and it's "C|NET", which should be "CNET" anyway.
-    sep_half = '|'
-
-    # escape separator
-    for sense in senses:
-        for idx, gloss in enumerate(sense.glosses):
-            # I am unreasonably proud of this solution.
-            sense.glosses[idx] = sense.glosses[idx].replace(sep_half, '¦')
-
-    if is_frequent:
-        freqmark = '(P)'
-
-    sep_full = fmt(sep_full, 'subdue')
-    sep_half = fmt(sep_half, 'subdue')
-    if is_frequent:
-        freqmark = fmt(freqmark, 'highlight')
-    kanjis, readings, senses = colorize_data(kanjis, readings, senses, search_params)
-
-    if romajifn:
-        readings = [romajifn(r) for r in readings]
-
-    s = ''
-
-    s += "%s\t%s" % (sep_full.join(readings), sep_full.join(kanjis))
-    for sense in senses:
-        tagstr = sense.tagstr()
-        if tagstr: tagstr += ' '
-
-        s += "\t%s%s" % (tagstr, sep_half.join(sense.glosses))
-
-    if is_frequent:
-        s += ' '  + freqmark
-
-    return s
-
-def format_entry_human(kanjis, readings, senses, is_frequent,
-                       search_params,
-                       romajifn=None):
-    sep_full = '；'
-    sep_half = '; '
-
-    if is_frequent:
-        freqmark = '※'
-
-    sep_full = fmt(sep_full, 'subdue')
-    sep_half = fmt(sep_half, 'subdue')
-
-    if is_frequent:
-        freqmark = fmt(freqmark, 'highlight')
-    kanjis, readings, senses = colorize_data(kanjis, readings, senses, search_params)
-
-    if romajifn:
-        readings = [romajifn(r) for r in readings]
-
-    s = ''
-
-    if is_frequent:
-        s += freqmark + ' ' + sep_full.join(readings)
-    else:
-        s += sep_full.join(readings)
-
-    if len(kanjis) > 0:
-        s += "\n"
-        s += sep_full.join(kanjis)
-
-    for sensenum, sense in enumerate(senses, start=1):
-        sn = str(sensenum) + '.'
-        sn = fmt(sn, 'misc')
-
-        tagstr = sense.tagstr()
-        if tagstr: tagstr += ' '
-
-        s += "\n%s %s%s" % (sn, tagstr, sep_half.join(sense.glosses))
-
-    return s
-
-
-def fetch_entry(cur, ent_seq):
-    '''Return tuple of (kanjis, readings, senses, is_frequent).'''
-
-    kanjis = [] # list of strings
-    readings = [] # list of strings
-    senses = [] # list of Sense objects
-
-    cur.execute('SELECT frequent FROM entries WHERE ent_seq = ?;', [ent_seq])
-    if cur.fetchone()[0] == 1:
-        is_frequent = True
-    else:
-        is_frequent = False
-
-    cur.execute('SELECT kanji FROM kanjis WHERE ent_seq = ?;', [ent_seq])
-    for row in cur.fetchall():
-        kanjis.append(row[0])
-
-    cur.execute('SELECT reading FROM readings WHERE ent_seq = ?;', [ent_seq])
-    for row in cur.fetchall():
-        readings.append(row[0])
-
-    senses = []
-    cur.execute(
-        'SELECT id, pos, misc, dial, s_inf FROM senses WHERE ent_seq = ?;',
-        [ent_seq]
-    )
-    for row in cur.fetchall():
-        sense = Sense(id=row[0],
-                      pos=row[1],
-                      misc=row[2],
-                      dial=row[3],
-                      s_inf=row[4])
-
-        cur.execute('SELECT gloss FROM glosses WHERE sense_id = ?;', [sense.id])
-        for row in cur.fetchall():
-            sense.glosses.append(row[0])
-
-        senses.append(sense)
-
-    return (kanjis, readings, senses, is_frequent)
 
 def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=False, frequent=False):
     '''Main search function.  Return list of ent_seqs.
@@ -287,6 +117,30 @@ def guess_search(cur, conditions):
         if len(res) > 0:
             return (condition, res)
     return (None, [])
+
+def matched_regexp(search_params):
+    '''Return a regexp that reflects what the search_params matched.
+
+    Used to color the result, with the params returned by guess_search().
+    '''
+
+    # TODO: there's some duplication between this logic and search_by()
+
+    reg = search_params['query']
+    if not search_params['regexp']:
+        reg = re.escape(reg)
+
+    if search_params['extent'] == 'whole':
+        reg = '^' + reg + '$'
+    elif search_params['extent'] == 'word':
+        reg = r'\b' + reg + r'\b'
+
+    if search_params['case_sensitive']:
+        reg = get_regexp(reg, 0)
+    else:
+        reg = get_regexp(reg, re.I)
+
+    return reg
 
 def short_expansion(cur, abbrev):
     cur.execute(''' SELECT short_expansion FROM abbreviations WHERE abbrev = ? ;''', [abbrev])

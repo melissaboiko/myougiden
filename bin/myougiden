@@ -8,12 +8,14 @@ try:
     from myougiden.common import *
     from myougiden.database import *
     from myougiden.texttools import *
+    from myougiden.orm import fetch_entry
     import myougiden.color
 except ImportError:
     sys.path.append('.')
     from myougiden.common import *
     from myougiden.database import *
     from myougiden.texttools import *
+    from myougiden.orm import fetch_entry
     import myougiden.color
 
 ap = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
@@ -271,21 +273,19 @@ if (args.field in ('auto', 'reading') and is_romaji(args.query)):
     conditions = new_conditions
 
 
-chosen_search, entries = guess_search(cur, conditions)
+chosen_search, ent_seqs = guess_search(cur, conditions)
 
 if chosen_search:
     if args.output_mode == 'human':
-        rows = [fetch_entry(cur, ent_seq) for ent_seq in entries]
+        entries = [fetch_entry(cur, ent_seq) for ent_seq in ent_seqs]
         print("\n\n".join([
-            format_entry_human(*row,
-                               search_params=chosen_search,
+            entry.format_human(search_params=chosen_search,
                                romajifn=args.out_romaji)
-            for row in rows]))
+            for entry in entries]))
 
     elif args.output_mode == 'tab':
-        for row in [fetch_entry(cur, ent_seq) for ent_seq in entries]:
-            print(format_entry_tsv(*row,
-                                   search_params=chosen_search,
+        for entry in [fetch_entry(cur, ent_seq) for ent_seq in ent_seqs]:
+            print(entry.format_tsv(search_params=chosen_search,
                                    romajifn=args.out_romaji))
 else:
     sys.exit(1)
