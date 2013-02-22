@@ -4,6 +4,7 @@ import os
 import re
 import sqlite3 as sql
 import romkan
+import configparser
 
 from termcolor import *
 from glob import glob

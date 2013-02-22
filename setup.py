@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
 import subprocess
 import os
+from configparser import ConfigParser
 from distutils.command.install import install
 from distutils.core import setup
 
-# on column 0 to make it easy to change by shell script.
-version='0.4.6'
+os.chdir(os.path.dirname(__file__))
 
-with open(os.path.join(os.path.dirname(__file__), 'README.md')) as f:
+config = ConfigParser()
+config.read('etc/config.ini')
+name = config['core']['package']
+version = config['core']['version']
+
+with open('README.md') as f:
       # hacky markdown to ResT
     longdesc=f.read().replace(":\n", "::\n")
 
-setup(name='myougiden',
+setup(name=name,
       version=version,
       description='Japanese/English command-line dictionary',
       long_description=longdesc,
@@ -20,6 +25,7 @@ setup(name='myougiden',
       url='https://github.com/leoboiko/myougiden',
       py_modules=['myougiden'],
       scripts=['bin/myougiden', 'bin/updatedb-myougiden'],
+      data_files=[('etc/myougiden/', ['etc/config.ini'])],
       license='GPLv3',
       install_requires=[
           'romkan',

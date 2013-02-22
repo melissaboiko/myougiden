@@ -2,3 +2,4 @@ include *.md
 include TODO
 include LICENSE
 include GPL-3
+include etc/config.ini

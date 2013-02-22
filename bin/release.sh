@@ -26,16 +26,17 @@ function next_version()
 
 set -e
 cd $(dirname "$0")/..
+config="etc/config.ini"
 
 if [ "$1" ]; then
   newversion="$1"
 else
-  oldversion="$(./setup.py --version)"
-  [ "$oldversion" ] || ( echo "Could not find version=." ; exit 1 )
+  oldversion="$(sed -n -e 's/^version: *//p' "$config")"
+  [ "$oldversion" ] || ( echo "Could not find 'version:' line" ; exit 1 )
   newversion="$(next_version $oldversion)"
 fi
 
-echo_do sed -i setup.py -e "s/^version=.*/version='$newversion'/"
+echo_do sed -i "$config" -e "s/^version:.*/version: $newversion/"
 echo_do git commit -a -m "releasing $newversion"
 echo_do git tag -u "$key" "$newversion" -m "releasing $newversion"
 echo_do git push
