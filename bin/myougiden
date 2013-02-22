@@ -18,6 +18,9 @@ except ImportError:
 
 ap = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 
+ap.add_argument('--version', action='store_true',
+                help='Show version.')
+
 ag = ap.add_argument_group('Type of query',
                            '''What field to look in.  If not provided, try all of them and return the
 first to match.''')
@@ -108,7 +111,6 @@ ap.add_argument('query', help='Text to look for.', metavar='QUERY', nargs='*')
 
 args = ap.parse_args()
 
-
 # handle output guesswork.
 if args.output_mode == 'auto':
     if sys.stdout.isatty():
@@ -162,6 +164,9 @@ if args.list_abbrevs:
     sys.exit(0)
 elif args.abbrev:
     print(abbrev_line(cur, args.abbrev))
+    sys.exit(0)
+elif args.version:
+    print(version(cur))
     sys.exit(0)
 
 # handle query guesswork

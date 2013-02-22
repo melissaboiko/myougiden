@@ -36,7 +36,6 @@
  - better documentation
    - tsv output
    - manpage?
-   - --version
 
  - config file support?
    - option --saveconf
