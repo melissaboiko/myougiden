@@ -89,11 +89,16 @@ Finally, install as above:
 Installing from sources
 -----------------------
 
+Required software:
+ - Python 3
+ - rsync (recommended)
+
 Required python packages (available on pip):
 
  - romkan
  - termcolor
  - argparse (only for Python ≤ 3.1)
+ - psutil (recommended; only for Python ≤ 3.2)
 
 To install from github:
 
