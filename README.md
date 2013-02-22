@@ -10,7 +10,7 @@ Features:
  - Optional rōmaji input and output.
  - Intelligently find out what kind of query is intended.
  - Option for tab-separated output, easily manipulable with Unix tools.
- - Full color output, including partial match highlighting.  Seriously, this
+ - Full color output, including partial match highlighting.  No seriously, this
    thing has a *lot* of color.  I mean we're talking Takashi Murakami material
    here.
 
