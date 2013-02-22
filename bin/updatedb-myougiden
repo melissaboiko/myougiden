@@ -401,11 +401,11 @@ def print_coffee():
     sys.stdout.write(coffee[animation_frame])
 
     if donecount == todo:
-        print(" %d/%d (100%%)... done!" %
+        print(" %d/%d (100%%) All done!" %
               (donecount, todo))
     else:
         # 6: hardcoded len(str(todo))
-        print(" %6d/%d (%2.2f%%)..." %
+        print(" %6d/%d (%2.2f%%) done..." %
               (donecount, todo, (float(donecount)/todo)*100))
 
     sys.stdout.flush()
@@ -692,4 +692,4 @@ not set, it will be automatically deleted after use.''')
 
     os.rename(PATHS['tmpdb'], PATHS['database'])
     atexit.unregister(cleanup)
-    print("All done, myougiden is ready to use!")
+    print("myougiden is ready to use, enjoy!")
