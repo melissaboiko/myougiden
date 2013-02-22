@@ -5,7 +5,9 @@ from configparser import ConfigParser
 from distutils.command.install import install
 from distutils.core import setup
 
-os.chdir(os.path.dirname(__file__))
+dirname = os.path.dirname(__file__)
+if dirname != '':
+    os.chdir(os.path.dirname(__file__))
 
 config = ConfigParser()
 config.read('etc/config.ini')
