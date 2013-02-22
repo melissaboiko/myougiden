@@ -94,7 +94,6 @@ Required software:
  - rsync (recommended)
 
 Required python packages (available on pip):
-
  - romkan
  - termcolor
  - argparse (only for Python ≤ 3.1)
