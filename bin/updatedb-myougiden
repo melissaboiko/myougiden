@@ -608,14 +608,16 @@ def gunzip_file(fpathgz):
         gz.close()
         os.remove(fpathgz)
 
-def fetch_jmdict_xml(localgz, update=True):
+def fetch_jmdict_xml(localgz):
+    '''Update (via rsync) or download JMdict_e.gz.
+
+    localgz is the local filename.  If it doesn't end in .gz, we assume
+    it's a temp file and don't try to update it, just download.'''
+
     localgz = os.path.realpath(localgz)
 
-    if update and os.path.isfile(localgz):
-        if re.search(r'\.gz$', localgz):
-            localxml = re.sub(r'\.gz$', '', localgz)
-        else:
-            raise ValueError('not a .gz file: ' + localgz)
+    if os.path.isfile(localgz) and re.search(r'\.gz$', localgz):
+        localxml = re.sub(r'\.gz$', '', localgz)
 
         try:
             print('%s file %s from %s' % (
@@ -660,9 +662,9 @@ if __name__ == '__main__':
                     help=('''Try to fetch JMdict_e.gz from
 %s .''' % PATHS['jmdictgz_http_url']))
 
-    ap.add_argument('-k', '--keep', action='store_true',
-                    help='''Keep downloaded JMdict_e.gz file after fetching.  If
-not set, it will be automatically deleted after use.''')
+    ap.add_argument('-k', '--delete', action='store_true',
+                    help='''Delete downloaded JMdict_e.gz file after fetching.
+If not set, it will be kept to speed up future updates.''')
 
     ap.add_argument('-j', '--jmdict',
                     default=os.path.join(PATHS['vardir'], 'JMdict_e.gz'),
@@ -692,21 +694,12 @@ colorize if writing to a terminal.''')
             args.color = 'no'
     if args.color == 'yes': usecolor = True
 
-    if args.fetch and not args.keep and localxml_exists:
-        # if they're keeping the file, they probably don't want to delete it.
-        print("%s: Local JMdict exists at %s ." % (
-            coloredp('INFO', 'magenta'), args.jmdict))
-        print("      Will update and keep it.")
-        args.keep = True
-
     if not localxml_exists and not args.fetch:
         # assume no one would want to call the script just to be told
         # "there's no file, please fetch"
         args.fetch = True
 
-    if args.fetch and not args.keep:
-        temp_xml = True
-
+    if args.fetch and args.delete:
         # it seems that both gzip and urllib require visible filenames, and
         # can't just work with in-memory file objects.
         f, xmlgzpath = tempfile.mkstemp()
@@ -736,9 +729,9 @@ colorize if writing to a terminal.''')
             os.remove(uf)
 
     if args.fetch:
-        fetch_jmdict_xml(xmlgzpath, update=(not temp_xml))
+        fetch_jmdict_xml(xmlgzpath)
 
-    if temp_xml:
+    if args.delete:
         print("%s from %s, please wait..." % (
             coloredp('Compiling database', 'magenta'),
             coloredp('temporary file', 'green')))
@@ -750,7 +743,7 @@ colorize if writing to a terminal.''')
     progress = sys.stdout.isatty()
     make_database(gzip.open(xmlgzpath, 'r'), PATHS['tmpdb'], progress=progress)
 
-    if temp_xml:
+    if args.delete:
         print("Deleting temporary file.")
         os.remove(xmlgzpath)
 
