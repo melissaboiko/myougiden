@@ -395,8 +395,14 @@ def print_coffee():
     global animation_frame
 
     sys.stdout.write(coffee[animation_frame])
-    print(" %6d/%d (%2.2f%%)..." %
-            (donecount, todo, (float(donecount)/todo)*100))
+
+    if donecount == todo:
+        print(" %d/%d (100%%)... done!" %
+              (donecount, todo))
+    else:
+        # 6: hardcoded len(str(todo))
+        print(" %6d/%d (%2.2f%%)..." %
+              (donecount, todo, (float(donecount)/todo)*100))
 
     sys.stdout.flush()
     animation_frame = (animation_frame+1) % len(coffee)
