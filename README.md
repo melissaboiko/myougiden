@@ -9,8 +9,10 @@ Features:
  - Partial, full, and whole-word queries.
  - Optional rōmaji input and output.
  - Intelligently find out what kind of query is intended.
- - Full color output, highlighting matches.
  - Option for tab-separated output, easily manipulable with Unix tools.
+ - Full color output, including partial match highlighting.  Seriously, this
+   thing has a *lot* of color.  I mean we're talking Takashi Murakami material
+   here.
 
 myougiden saves EDICT data in sqlite3 format. This costs some
 disk space (currently about 52MiB), but with indexes, it seems to
