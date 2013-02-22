@@ -9,14 +9,13 @@ os.chdir(os.path.dirname(__file__))
 
 config = ConfigParser()
 config.read('etc/config.ini')
-name = config['core']['package']
 version = config['core']['version']
 
 with open('README.md') as f:
       # hacky markdown to ResT
     longdesc=f.read().replace(":\n", "::\n")
 
-setup(name=name,
+setup(name='myougiden',
       version=version,
       description='Japanese/English command-line dictionary',
       long_description=longdesc,
