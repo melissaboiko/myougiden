@@ -88,7 +88,7 @@ class Entry():
             s += "\t%s%s" % (tagstr, sep_half.join(sense.glosses))
 
         if self.is_frequent():
-            s += fmt('(P)', 'highlight')
+            s += ' ' + fmt('(P)', 'highlight')
 
         return s
 
@@ -97,7 +97,7 @@ class Entry():
         self.colorize(search_params)
 
         sep_full = fmt('；', 'subdue')
-        sep_half = fmt(';', 'subdue')
+        sep_half = fmt('; ', 'subdue')
 
 
         s = ''
@@ -208,7 +208,10 @@ class Sense():
                 tagstr += ' '
             tagstr += '[%s]' % self.s_inf
 
-        return fmt(tagstr, 'subdue')
+        if len(tagstr) > 0:
+            return fmt(tagstr, 'subdue')
+        else:
+            return ''
 
     def colorize(self, matchreg=None):
         '''Colorizes glosses if matchreg is not None.'''
