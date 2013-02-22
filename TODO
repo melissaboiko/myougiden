@@ -47,6 +47,9 @@
    - can we make pypi post-uninstall delete database?
    - deb?
 
+ - localization
+   - Japanese interface
+
  - alternative backends?
   - better benchmarks to compare them
   - option to auto-compress/decompress database
