@@ -11,4 +11,4 @@ jm = et.parse(gzip.open(config['paths']['jmdictgz'], 'r'))
 
 from xml.etree.cElementTree import tostring
 def tos(element):
-    tostring(element).decode()
+    return tostring(element).decode()
