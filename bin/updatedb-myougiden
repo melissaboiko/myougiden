@@ -762,7 +762,7 @@ if __name__ == '__main__':
 If not set, it will be kept to speed up future updates.''')
 
     ap.add_argument('-j', '--jmdict',
-                    default=os.path.join(config['paths']['jmdictgz']),
+                    default=config['paths']['jmdictgz'],
                     metavar='PATH',
                     help='''Path of local JMdict_e.gz file. Default:
 %(default)s .''')
