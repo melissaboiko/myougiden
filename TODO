@@ -13,6 +13,7 @@
    - don't be entry-centric
      - more fine-grained --frequent (ke_pri, re_pri)
      - how does my code behave if a sense has _both_ stagk and stagr?
+       (e.g. 叩き, 紅葉)
 
    - pitch-accent data (from where?)
    - names (JMnedict)?
