@@ -6,3 +6,4 @@ jmdict.sqlite
 MANIFEST
 *.pyc
 __pycache*
+share
