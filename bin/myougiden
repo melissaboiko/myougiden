@@ -270,19 +270,22 @@ if (args.field in ('auto', 'reading') and tt.is_romaji(args.query)):
 chosen_search, entry_ids = search.guess(cur, conditions)
 
 if chosen_search:
+    entries = [orm.fetch_entry(cur, entry_id) for entry_id in entry_ids]
+
     if args.output_mode == 'human':
-        entries = [orm.fetch_entry(cur, entry_id) for entry_id in entry_ids]
-        out=("\n\n".join([
-            entry.format_human(search_params=chosen_search,
-                               romajifn=args.out_romaji)
-            for entry in entries]))
+        out = [ entry.format_human(search_params=chosen_search,
+                                      romajifn=args.out_romaji)
+                  for entry in entries]
+
+        out = ("\n\n".join(out)) + "\n"
 
     elif args.output_mode == 'tab':
-        for entry in [orm.fetch_entry(cur, entry_id) for entry_id in entry_ids]:
-            out = entry.format_tsv(search_params=chosen_search,
-                                   romajifn=args.out_romaji)
+        out = [ entry.format_tsv(search_params=chosen_search,
+                                 romajifn=args.out_romaji)
+               for entry in entries]
 
-    out += "\n"
+        out = ("\n".join(out)) + "\n"
+
     if sys.stdout.isatty():
         pager = common.color_pager()
         if pager:
