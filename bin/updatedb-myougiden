@@ -354,6 +354,8 @@ def create_tables(cur, jmdictxml):
       );
     ''')
 
+def create_indexes(cur):
+
     cur.execute('''
       CREATE INDEX kanjis_entry_id ON kanjis (entry_id);
     ''')
@@ -644,6 +646,7 @@ def make_database(jmdict, sqlite, progress=True):
     con = sql.connect(tmpdb, isolation_level='IMMEDIATE')
     cur = con.cursor()
 
+    doitlive(cur)
     create_tables(cur, jmdict.name)
 
     if progress:
@@ -657,10 +660,19 @@ def make_database(jmdict, sqlite, progress=True):
         signal.alarm(1)
 
     p.ParseFile(jmdict)
+    create_indexes(cur)
 
     cur.close()
     con.commit()
     con.close()
+
+def doitlive(cur):
+    cur.execute('PRAGMA synchronous = 0;')
+    cur.execute('PRAGMA journal_mode = 0;')
+    cur.execute('PRAGMA temp_store = memory;')
+    cur.execute('PRAGMA foreign_keys = 0;')
+    cur.execute('PRAGMA ignore_check_constraints = 1;')
+
 
 def gzip_file(fpath):
     try:
