@@ -127,38 +127,6 @@ class Entry():
 
         return s
 
-    def insert(self, cur):
-        cur.execute('''INSERT INTO entries (ent_seq, frequent)
-                    VALUES (?, ?);''', [self.ent_seq, self.frequent])
-
-        cur.execute('''SELECT max(entry_id) FROM entries;''')
-        self.entry_id = cur.fetchone()[0]
-
-        for k in self.kanjis:
-            cur.execute('''INSERT INTO kanjis (entry_id, kanji)
-                        VALUES (?, ?);''', [self.entry_id, k.text])
-
-        for r in self.readings:
-            cur.execute('''INSERT INTO readings (entry_id, reading)
-                        VALUES (?, ?);''', [self.entry_id, r.text])
-
-
-        for sense in self.senses:
-            cur.execute('''INSERT INTO senses
-                        (entry_id, pos, misc, dial, s_inf)
-                         VALUES (?, ?, ?, ?, ?)''',
-                        [self.entry_id,
-                         sense.pos,
-                         sense.misc,
-                         sense.dial,
-                         sense.s_inf])
-            cur.execute('''SELECT max(sense_id) FROM senses;''')
-            sense_id = cur.fetchone()[0]
-            for gloss in sense.glosses:
-                cur.execute('''INSERT INTO glosses (sense_id, gloss)
-                            VALUES (?, ?)''',
-                            [sense_id, gloss])
-
 class Kanji():
     '''Equivalent to JMdict <k_ele>.'''
     def __init__(self,

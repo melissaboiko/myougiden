@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import atexit
 import gzip
+import itertools
 import os
 import re
 import signal
@@ -449,6 +450,121 @@ def update_coffee(signum=None, frame=None):
 
     print_coffee()
 
+def insert_entries(cur, entries):
+    cur.execute('''SELECT max(entry_id) FROM entries;''')
+    last_id = cur.fetchone()[0] or 0
+    for i, e in enumerate(entries, 1):
+        e.entry_id = last_id + i
+
+    cur.executemany('''INSERT INTO entries
+                    (entry_id, ent_seq, frequent)
+                    VALUES (?, ?, ?);''',
+                    [(e.entry_id, e.ent_seq, e.frequent) for e in entries])
+
+    # TODO: can this be done with comprehensions or iterators?
+    # tuples = []
+    # for e in entries:
+    #     for k in e.kanjis:
+    #         tuples.append((e.entry_id, k.text))
+    tuples = [(e.entry_id, k.text) for e in entries for k in e.kanjis]
+
+    cur.executemany('''INSERT INTO kanjis
+                    (entry_id, kanji)
+                    VALUES (?, ?);''',
+                    tuples)
+
+    tuples = [(e.entry_id, r.text) for e in entries for r in e.readings]
+    cur.executemany('''INSERT INTO readings
+                    (entry_id, reading)
+                    VALUES (?, ?);''',
+                    tuples)
+
+    cur.execute('''SELECT max(sense_id) FROM senses;''')
+    last_id = cur.fetchone()[0] or 0
+
+    # flat list of all senses
+    senses = tuple(itertools.chain(*[e.senses for e in entries]))
+    for s in senses:
+        last_id += 1
+        s.sense_id = last_id
+
+    tuples = [(e.entry_id, s.sense_id, s.pos, s.misc, s.dial, s.s_inf)
+              for e in entries for s in e.senses]
+    cur.executemany('''INSERT INTO senses
+                     (entry_id, sense_id, pos, misc, dial, s_inf)
+                     VALUES (?, ?, ?, ?, ?, ?);''',
+                    tuples)
+
+    tuples = [(s.sense_id, g) for s in senses for g in s.glosses]
+    cur.executemany('''INSERT INTO glosses
+                    (sense_id, gloss)
+                    VALUES (?, ?)''',
+                    tuples)
+
+def expand_entry(entry):
+    '''Treat re_restr, stagk, stagr by expanding one entry into many.'''
+
+    # readings usually apply to all kanji.
+    # if a reading has a re_restr, it applies to only that kanji.
+    #
+    # in that case, we remove it from the current entry, and create a
+    # new entry with only that kanji. so each JMdict entry (here in the
+    # parsing buffer as entry) may explode into many of our Entries
+    # (and database rows).
+    entries = []
+
+    for r in entry.readings[:]:
+        if len(r.restr) > 0:
+            extra = deepcopy(entry)
+            extra.readings = [r]
+            extra.kanjis = [k for k in extra.kanjis
+                            if k.text in r.restr]
+            entries.append(extra)
+            entry.readings.remove(r)
+
+    # only add the original entry if it has any (non-restr) readings left.
+    if len(entry.readings) > 0:
+        entries.append(entry)
+
+    # ...and now we remove from entries all their senses with either
+    # stagk or stagr, building new entries with only the appropirate
+    # readings/kanjis.
+    for entry in entries[:]:
+        for s in entry.senses:
+            if len(s.stagk) > 0:
+                kanjis = [k for k in entry.kanjis
+                          if k.text in s.stagk]
+
+                if len(kanjis) > 0:
+                    extra = deepcopy(entry)
+                    extra.kanjis = kanjis
+                    entries.append(extra)
+
+                entry.senses.remove(s)
+
+        if len(entry.senses) == 0:
+            entries.remove(entry)
+
+    for entry in entries[:]:
+        for s in entry.senses:
+            if len(s.stagr) > 0:
+                readings = [r for r in entry.readings
+                            if r.text in s.stagr]
+
+                if len(readings) > 0:
+                    extra = deepcopy(entry)
+                    extra.readings = readings
+                    entries.append(extra)
+
+                entry.senses.remove(s)
+
+        if len(entry.senses) == 0:
+            entries.remove(entry)
+
+    # TODO: what happens if a sense has _both_ stagk and stagr?
+    return entries
+
+
 def make_database(jmdict, sqlite, progress=True):
     global todo
     global donecount
@@ -457,13 +573,35 @@ def make_database(jmdict, sqlite, progress=True):
 
 
     class Buffer:
-        pass
+        def __init__(self):
+            self.init()
+
+        def init(self):
+            self.insert_queue = []
+            self.size = 0
+            self.bufsize = 10240
+
+            # temps for last parsed element
+            self.entry = None
+            self.kanji = None
+            self.reading = None
+            self.sense = None
+            self.cdata = ''
+
+        def clear(self):
+            for e in self.insert_queue: del e
+            del self.entry
+            del self.kanji
+            del self.reading
+            del self.sense
+
+            self.init()
+
+        def queue(self, entry):
+            self.insert_queue.append(entry)
+            self.size += 1
+
     b = Buffer()
-    b.entry = None
-    b.kanji = None
-    b.reading = None
-    b.sense = None
-    b.cdata = ''
 
     def handle_entity_decl(name,
             is_parameter_entity,
@@ -552,85 +690,18 @@ def make_database(jmdict, sqlite, progress=True):
             b.entry.senses.append(b.sense)
 
         elif el == 'entry':
+            for e in expand_entry(b.entry):
+                b.queue(e)
 
-            # readings usually apply to all kanji.
-            # if a reading has a re_restr, it applies to only that kanji.
-            #
-            # in that case, we remove it from the current entry, and create a
-            # new entry with only that kanji. so each JMdict entry (here in the
-            # parsing buffer as b.entry) may explode into many of our Entries
-            # (and database rows).
-            entries = []
+            if b.size >= b.bufsize:
+                insert_entries(cur, b.insert_queue)
+                b.clear()
 
-            for r in b.entry.readings[:]:
-                if len(r.restr) > 0:
-                    extra = deepcopy(b.entry)
-                    extra.readings = [r]
-                    extra.kanjis = [k for k in extra.kanjis
-                                    if k.text in r.restr]
-                    entries.append(extra)
-                    b.entry.readings.remove(r)
+            if progress: donecount += 1
 
-            # we only add the original, full entry if it has readings without
-            # re_restr.
-            if len(b.entry.readings) > 0:
-                entries.append(b.entry)
-
-            # ...and now we remove from entries all their senses with either
-            # stagk or stagr, building new entries with only the appropirate
-            # readings/kanjis.
-            for entry in entries[:]:
-                for s in entry.senses:
-                    if len(s.stagk) > 0:
-                        kanjis = [k for k in entry.kanjis
-                                  if k.text in s.stagk]
-
-                        if len(kanjis) > 0:
-                            extra = deepcopy(entry)
-                            extra.kanjis = kanjis
-                            entries.append(extra)
-
-                        entry.senses.remove(s)
-
-                if len(entry.senses) == 0:
-                    entries.remove(entry)
-
-            for entry in entries[:]:
-                for s in entry.senses:
-                    if len(s.stagr) > 0:
-                        readings = [r for r in entry.readings
-                                    if r.text in s.stagr]
-
-                        if len(readings) > 0:
-                            extra = deepcopy(entry)
-                            extra.readings = readings
-                            entries.append(extra)
-
-                        entry.senses.remove(s)
-
-                if len(entry.senses) == 0:
-                    entries.remove(entry)
-
-            # TODO: what happens if a sense has _both_ stagk and stagr?
-
-            for entry in entries:
-                entry.insert(cur)
-                del entry
-
-            del b.entry
-            del b.reading
-            del b.kanji
-            del b.sense
-            del b.cdata
-
-            b.entry = None
-            b.reading = None
-            b.kanji = None
-            b.sense = None
-            b.cdata = ''
-
-            if progress:
-                donecount += 1
+        elif el == 'JMdict':
+            insert_entries(cur, b.insert_queue)
+            b.clear()
 
 
     p = xml.parsers.expat.ParserCreate()
