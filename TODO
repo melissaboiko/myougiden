@@ -12,7 +12,7 @@
 
    - don't be entry-centric
      - more fine-grained --frequent (ke_pri, re_pri)
-     - support stagk, stagr in sense
+     - how does my code behave if a sense has _both_ stagk and stagr?
 
    - pitch-accent data (from where?)
    - names (JMnedict)?

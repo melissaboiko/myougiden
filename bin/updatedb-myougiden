@@ -495,6 +495,9 @@ def make_database(jmdict, sqlite, progress=True):
         elif el == 'sense':
             b.sense = Sense()
 
+            b.sense.stagk = []
+            b.sense.stagr = []
+
     def handle_cdata(data):
         nonlocal b
         b.cdata += data
@@ -527,6 +530,12 @@ def make_database(jmdict, sqlite, progress=True):
                     break
             setattr(b.sense, el, abbrev)
 
+        elif el == 'stagk':
+            b.sense.stagk.append(b.cdata)
+
+        elif el == 'stagr':
+            b.sense.stagr.append(b.cdata)
+
         elif el == 's_inf':
             b.sense.s_inf = b.cdata
 
@@ -552,7 +561,7 @@ def make_database(jmdict, sqlite, progress=True):
             entries = []
 
             for r in b.entry.readings[:]:
-                if r.restr:
+                if len(r.restr) > 0:
                     extra = deepcopy(b.entry)
                     extra.readings = [r]
                     extra.kanjis = [k for k in extra.kanjis
@@ -564,6 +573,43 @@ def make_database(jmdict, sqlite, progress=True):
             # re_restr.
             if len(b.entry.readings) > 0:
                 entries.append(b.entry)
+
+            # ...and now we remove from entries all their senses with either
+            # stagk or stagr, building new entries with only the appropirate
+            # readings/kanjis.
+            for entry in entries[:]:
+                for s in entry.senses:
+                    if len(s.stagk) > 0:
+                        kanjis = [k for k in entry.kanjis
+                                  if k.text in s.stagk]
+
+                        if len(kanjis) > 0:
+                            extra = deepcopy(entry)
+                            extra.kanjis = kanjis
+                            entries.append(extra)
+
+                        entry.senses.remove(s)
+
+                if len(entry.senses) == 0:
+                    entries.remove(entry)
+
+            for entry in entries[:]:
+                for s in entry.senses:
+                    if len(s.stagr) > 0:
+                        readings = [r for r in entry.readings
+                                    if r.text in s.stagr]
+
+                        if len(readings) > 0:
+                            extra = deepcopy(entry)
+                            extra.readings = readings
+                            entries.append(extra)
+
+                        entry.senses.remove(s)
+
+                if len(entry.senses) == 0:
+                    entries.remove(entry)
+
+            # TODO: what happens if a sense has _both_ stagk and stagr?
 
             for entry in entries:
                 entry.insert(cur)
