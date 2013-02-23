@@ -151,13 +151,17 @@ class Reading():
     def __init__(self,
                  reading_id=None,
                  text=None, # = reb
+                 re_nokanji=False,
+                 re_restr=None,
+                 re_inf=None,
                  frequent=False,
-                 inf=None,
                 ):
         self.reading_id = reading_id
         self.text = text
+        self.re_nokanji = re_nokanji
+        self.re_restr = re_restr or []
+        self.re_inf = re_inf
         self.frequent = frequent
-        self.inf = inf
 
     def colorize(self, matchreg=None, romaji=False):
         if matchreg:
