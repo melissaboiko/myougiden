@@ -32,6 +32,7 @@ Some example queries:
     $ myougiden -x '茶.'       # regexp search
     $ myougiden sakura         # if no match is found, treat as rōmaji
     $ myougiden -r kanji       # forces rōmaji
+    $ myougiden --abbr uK      # reference for EDICT-style abbreviations
 
 Installation
 ============
