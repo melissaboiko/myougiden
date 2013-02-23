@@ -5,17 +5,19 @@
    - whole-word for Japanese (feasible?)
 
  - data:
-   - more JMdict fields?
-     - reproduce everything in EDICT at the very least.
-     - re_nokanji (how?)
+   - be sure we cover everything covered in EDICT 1, at the very least.
+
+   - smarter handling of restrictions
+     - the current model that expands entries with re_restr, stagk, stagr into
+       many is workable, but can be cumbersome (e.g. too many entries for
+       紅葉).  there must be a better way of doing this.
+     - support re_nokanji (how?)
 
    - clean abbreviations that are not being used
 
-   - don't be entry-centric
-     - more fine-grained --frequent (ke_pri, re_pri)
-     - how does my code behave if a sense has _both_ stagk and stagr?
-       (e.g. 叩き, 紅葉)
+   - more fine-grained --frequent (support ke_pri, re_pri)
 
+ - go beyond JMdict
    - pitch-accent data (from where?)
    - names (JMnedict)?
    - famous people/place names from wikipedia etc?
@@ -25,19 +27,18 @@
    - color outputs:
      - light background mode
    - better wrapping for "human" output
-
- - better error handling:
-   - pretty message when download fails
+   - error handling:
+     - pretty message when download fails
 
  - better documentation
    - tsv output
    - manpage?
 
  - config file support?
-   - option --saveconf
+   - and option --saveconf
 
  - improve install script/distutils/updatedb
-   - smarter handling of dev vs. installed environments
+   - better handling of dev vs. installed environments
    - can we make pypi post-uninstall delete database?
    - deb?
 
@@ -50,4 +51,4 @@
   - backend: EDICT2 with grep
   - backend: some NoSQL thing?
   - backend: some kind of "full-text search" thing?
-  - DICT?
+  - DICT protocol?
