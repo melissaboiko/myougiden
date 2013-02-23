@@ -85,6 +85,10 @@ ag.add_argument('--color', choices=('yes', 'no', 'auto'), default='auto',
 colorize if writing to a terminal.''')
 ag.add_argument('-c', action='store_const', const='yes', dest='color',
                 help='Equivalent to --color=yes')
+ag.add_argument('--background', '--bg', choices=('dark', 'light', 'auto'), default='auto',
+                help='''Use colorscheme for dark or light background.
+Autodetection can be spotty.  If it's not working for you, you can also set it
+in the BACKGROUND environment variable.''')
 
 ag.add_argument('--out-hepburn', '--oh',
                 action='store_const', const=romkan.to_hepburn,
@@ -121,6 +125,14 @@ if args.color == 'auto':
         args.color = 'no'
 
 color.use_color =  (args.color == 'yes')
+if color.use_color:
+    if args.background == 'auto':
+        args.background = color.guess_background()
+
+    if args.background == 'dark':
+        pass # default
+    else:
+        color.style = color.LIGHTBG
 
 args.query = ' '.join(args.query)
 

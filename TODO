@@ -24,8 +24,6 @@
    - order by frequency?
 
  - output:
-   - color outputs:
-     - light background mode
    - better wrapping for "human" output
    - error handling:
      - pretty message when download fails
