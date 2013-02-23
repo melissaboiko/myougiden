@@ -13,7 +13,6 @@
    - don't be entry-centric
      - more fine-grained --frequent (ke_pri, re_pri)
      - how does my code behave if a sense has _both_ stagk and stagr?
-     - check repeated cases like ウーロンちゃ, ちゃしぶ
 
    - pitch-accent data (from where?)
    - names (JMnedict)?

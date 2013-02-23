@@ -54,8 +54,11 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
     if frequent:
         where_extra += 'AND frequent = 1'
 
+#     print(('SELECT DISTINCT entry_id FROM entries %s WHERE %s.%s %s %s ;'
+#           % (join, table, field, operator, where_extra)).replace('?', "'%s'" % query))
+
     cur.execute('''
-SELECT entry_id
+SELECT DISTINCT entry_id
 FROM entries
   %s
 WHERE %s.%s %s
