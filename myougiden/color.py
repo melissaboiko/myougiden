@@ -81,4 +81,3 @@ def color_regexp(reg_obj, longstring, base_style=None, match_style='match'):
             head = fmt(head, base_style)
             tail = fmt(tail, base_style)
         return head + fmt(m.group(), match_style) + tail
-

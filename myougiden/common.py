@@ -1,5 +1,6 @@
 import errno
 import os
+import re
 
 from myougiden import config
 from myougiden.color import fmt
@@ -102,3 +103,63 @@ External programs:
     scripts['nice'],
     scripts['ionice'],
     ))
+
+def color_pager():
+    '''Return None, or a color-enabled pager to use.'''
+    pager = os.getenv('MYOUGIDENPAGER')
+
+    # trust user to set his color-enabled pager
+    if pager: return pager
+
+    # guess
+    pager = os.getenv('PAGER')
+
+    if not pager:
+        if which('less'):
+            pager='less'
+            os.environ['LESS'] = 'FRX'
+            return pager
+        else:
+            return None
+    elif re.match('less', pager):
+        opts = os.getenv('LESS')
+        if not opts:
+            os.environ['LESS'] = 'FRX'
+        elif (re.search('[rR]', os.environ('LESS'))
+              or re.search('-[rR]', pager)):
+            return pager
+        else:
+            # damn
+            return None
+    elif re.match('most|w3m', pager):
+        return pager
+    else:
+        # more(1) works in my machine, but they say some don't?
+        # 'vim -' doesn't work
+        return None
+
+# credits:
+# http://stackoverflow.com/questions/566746/how-to-get-console-window-width-in-python
+def get_terminal_size():
+    import os
+    env = os.environ
+    def ioctl_GWINSZ(fd):
+        try:
+            import fcntl, termios, struct, os
+            cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,
+        '1234'))
+        except:
+            return
+        return cr
+    cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
+    if not cr:
+        try:
+            fd = os.open(os.ctermid(), os.O_RDONLY)
+            cr = ioctl_GWINSZ(fd)
+            os.close(fd)
+        except:
+            pass
+    if not cr:
+        cr = (env.get('LINES', 25), env.get('COLUMNS', 80))
+
+    return int(cr[1]), int(cr[0])

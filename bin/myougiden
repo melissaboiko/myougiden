@@ -272,14 +272,29 @@ chosen_search, entry_ids = search.guess(cur, conditions)
 if chosen_search:
     if args.output_mode == 'human':
         entries = [orm.fetch_entry(cur, entry_id) for entry_id in entry_ids]
-        print("\n\n".join([
+        out=("\n\n".join([
             entry.format_human(search_params=chosen_search,
                                romajifn=args.out_romaji)
             for entry in entries]))
 
     elif args.output_mode == 'tab':
         for entry in [orm.fetch_entry(cur, entry_id) for entry_id in entry_ids]:
-            print(entry.format_tsv(search_params=chosen_search,
-                                   romajifn=args.out_romaji))
+            out = entry.format_tsv(search_params=chosen_search,
+                                   romajifn=args.out_romaji)
+
+    out += "\n"
+    if sys.stdout.isatty():
+        pager = common.color_pager()
+        if pager:
+            if out.count("\n") > common.get_terminal_size()[1]:
+                import subprocess
+                import shlex
+                p = subprocess.Popen(shlex.split(pager), stdin=subprocess.PIPE)
+                p.communicate(out.encode())
+                p.wait()
+                sys.exit(0)
+
+    sys.stdout.write(out)
+    sys.exit(0)
 else:
     sys.exit(1)
