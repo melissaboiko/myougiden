@@ -12,17 +12,7 @@
 
    - don't be entry-centric
      - more fine-grained --frequent (ke_pri, re_pri)
-     - support re_restr in readings
      - support stagk, stagr in sense
-
-     - how to do it? EDICT expand entries into many lines:
-         半平 [はんぺい] /(n) (1) (uk) pounded fish cake/
-         半平 [はんぺん] /(n) (1) (uk) pounded fish cake/
-         半片 [はんぺん] /(n) (1) (uk) pounded fish cake/(2) half a slice
-     - whereas EDICT2 repeats in-line:
-         半片;半平 [はんぺん;はんぺい(半平)] /(n) (1) (uk) pounded fish cake/(2) (半片 only) half a slice/EntL1010230/
-     - EDICT style seems reasonable, but the database schema needs to be
-       redesigned.
 
    - pitch-accent data (from where?)
    - names (JMnedict)?
@@ -37,7 +27,7 @@
 
  - better error handling:
    - pretty message when download fails
-e
+
  - better documentation
    - tsv output
    - manpage?

@@ -267,18 +267,18 @@ if (args.field in ('auto', 'reading') and tt.is_romaji(args.query)):
     conditions = new_conditions
 
 
-chosen_search, ent_seqs = search.guess(cur, conditions)
+chosen_search, entry_ids = search.guess(cur, conditions)
 
 if chosen_search:
     if args.output_mode == 'human':
-        entries = [orm.fetch_entry(cur, ent_seq) for ent_seq in ent_seqs]
+        entries = [orm.fetch_entry(cur, entry_id) for entry_id in entry_ids]
         print("\n\n".join([
             entry.format_human(search_params=chosen_search,
                                romajifn=args.out_romaji)
             for entry in entries]))
 
     elif args.output_mode == 'tab':
-        for entry in [orm.fetch_entry(cur, ent_seq) for ent_seq in ent_seqs]:
+        for entry in [orm.fetch_entry(cur, entry_id) for entry_id in entry_ids]:
             print(entry.format_tsv(search_params=chosen_search,
                                    romajifn=args.out_romaji))
 else:

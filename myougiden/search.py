@@ -2,7 +2,7 @@ import re
 from myougiden import texttools as tt
 
 def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=False, frequent=False):
-    '''Main search function.  Return list of ent_seqs.
+    '''Main search function.  Return list of entry_ids.
 
     Field in ('kanji', 'reading', 'gloss').
     '''
@@ -48,14 +48,14 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
         join = 'NATURAL JOIN readings'
     elif field == 'gloss':
         table = 'glosses'
-        join = 'NATURAL JOIN senses JOIN glosses ON senses.id = glosses.sense_id'
+        join = 'NATURAL JOIN senses NATURAL JOIN glosses'
 
     where_extra = ''
     if frequent:
         where_extra += 'AND frequent = 1'
 
     cur.execute('''
-SELECT ent_seq
+SELECT entry_id
 FROM entries
   %s
 WHERE %s.%s %s

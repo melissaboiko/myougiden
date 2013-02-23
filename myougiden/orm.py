@@ -6,12 +6,14 @@ from myougiden.color import fmt
 class Entry():
     '''Equivalent to JMdict entry.'''
     def __init__(self,
-                 ent_seq=None,
+                 entry_id=None, # our database-specific ID
+                 ent_seq=None, # JMdict ID
                  kanjis=None, # list of Kanjis()
                  readings=None, # list of Readings()
                  senses=None, # list of Senses
                  frequent=False
                 ):
+        self.entry_id = entry_id
         self.ent_seq = ent_seq
         self.kanjis = kanjis or []
         self.readings = readings or []
@@ -125,14 +127,46 @@ class Entry():
 
         return s
 
+    def insert(self, cur):
+        cur.execute('''INSERT INTO entries (ent_seq, frequent)
+                    VALUES (?, ?);''', [self.ent_seq, self.frequent])
+
+        cur.execute('''SELECT max(entry_id) FROM entries;''')
+        self.entry_id = cur.fetchone()[0]
+
+        for k in self.kanjis:
+            cur.execute('''INSERT INTO kanjis (entry_id, kanji)
+                        VALUES (?, ?);''', [self.entry_id, k.text])
+
+        for r in self.readings:
+            cur.execute('''INSERT INTO readings (entry_id, reading)
+                        VALUES (?, ?);''', [self.entry_id, r.text])
+
+
+        for sense in self.senses:
+            cur.execute('''INSERT INTO senses
+                        (entry_id, pos, misc, dial, s_inf)
+                         VALUES (?, ?, ?, ?, ?)''',
+                        [self.entry_id,
+                         sense.pos,
+                         sense.misc,
+                         sense.dial,
+                         sense.s_inf])
+            cur.execute('''SELECT max(sense_id) FROM senses;''')
+            sense_id = cur.fetchone()[0]
+            for gloss in sense.glosses:
+                cur.execute('''INSERT INTO glosses (sense_id, gloss)
+                            VALUES (?, ?)''',
+                            [sense_id, gloss])
+
 class Kanji():
     '''Equivalent to JMdict <k_ele>.'''
     def __init__(self,
-                 id=None,
+                 kanji_id=None,
                  text=None, # = keb
                  frequent=False,
                  inf=None):
-        self.id = id
+        self.kanji_id = kanji_id
         self.text = text
         self.frequent = frequent
         self.inf = inf
@@ -147,12 +181,12 @@ class Kanji():
 class Reading():
     '''Equivalent to JMdict <r_ele>.'''
     def __init__(self,
-                 id=None,
+                 reading_id=None,
                  text=None, # = reb
                  frequent=False,
                  inf=None,
                 ):
-        self.id = id
+        self.reading_id = reading_id
         self.text = text
         self.frequent = frequent
         self.inf = inf
@@ -172,18 +206,18 @@ class Sense():
     - misc: other info, abbreviated.
     - dial: dialect.
     - s_inf: long case-by-case remarks.
-    - id: database ID.
+    - sense_id: database ID.
     '''
 
     def __init__(self,
-                 id=None,
+                 sense_id=None,
                  pos=None,
                  misc=None,
                  dial=None,
                  s_inf=None,
                  glosses=None,
                 ):
-        self.id = id
+        self.sense_id = sense_id
         self.pos = pos
         self.misc = misc
         self.dial = dial
@@ -221,55 +255,54 @@ class Sense():
             for idx, gloss in enumerate(self.glosses):
                 self.glosses[idx] = color.color_regexp(matchreg, gloss)
 
-def fetch_entry(cur, ent_seq):
+def fetch_entry(cur, entry_id):
     '''Return Entry object..'''
 
     kanjis = []
     readings = []
     senses = []
 
-    cur.execute('SELECT id, kanji FROM kanjis WHERE ent_seq = ?;', [ent_seq])
+    cur.execute('SELECT kanji_id, kanji FROM kanjis WHERE entry_id = ?;', [entry_id])
     for row in cur.fetchall():
         # TODO: k_inf, kpri
         kanjis.append(Kanji(
-            id=row[0],
+            kanji_id=row[0],
             text=row[1],
         ))
 
-    cur.execute('SELECT id, reading FROM readings WHERE ent_seq = ?;', [ent_seq])
+    cur.execute('SELECT reading_id, reading FROM readings WHERE entry_id = ?;', [entry_id])
     for row in cur.fetchall():
         # TODO: r_inf, rpri
         readings.append(Reading(
-            id=row[0],
+            reading_id=row[0],
             text=row[1]
         ))
 
     senses = []
     cur.execute(
-        'SELECT id, pos, misc, dial, s_inf FROM senses WHERE ent_seq = ?;',
-        [ent_seq]
+        'SELECT sense_id, pos, misc, dial, s_inf FROM senses WHERE entry_id = ?;',
+        [entry_id]
     )
     for row in cur.fetchall():
-        sense = Sense(id=row[0],
+        sense = Sense(sense_id=row[0],
                       pos=row[1],
                       misc=row[2],
                       dial=row[3],
                       s_inf=row[4])
 
-        cur.execute('SELECT gloss FROM glosses WHERE sense_id = ?;', [sense.id])
+        cur.execute('SELECT gloss FROM glosses WHERE sense_id = ?;', [sense.sense_id])
         for row in cur.fetchall():
             sense.glosses.append(row[0])
 
         senses.append(sense)
 
-    cur.execute('SELECT frequent FROM entries WHERE ent_seq = ?;', [ent_seq])
+    cur.execute('SELECT frequent FROM entries WHERE entry_id = ?;', [entry_id])
     if cur.fetchone()[0] == 1:
         frequent = True
     else:
         frequent = False
 
-
-    return Entry(ent_seq=ent_seq,
+    return Entry(entry_id=entry_id,
                  kanjis=kanjis,
                  readings=readings,
                  senses=senses,
