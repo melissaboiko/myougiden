@@ -24,7 +24,7 @@ class Entry():
     def is_frequent(self):
         return self.frequent
 
-    def colorize(self, search_params):
+    def colorize(self, search_params, romaji=False):
         '''Alter child elements to add color, including the matched search.'''
 
         if not color.use_color:
@@ -33,7 +33,7 @@ class Entry():
         matchreg = search.matched_regexp(search_params)
         if search_params['field'] == 'reading':
             for reading in self.readings:
-                reading.colorize(matchreg=matchreg)
+                reading.colorize(matchreg=matchreg, romaji=romaji)
             for kanjis in self.kanjis:
                 kanjis.colorize()
             for sense in self.senses:
@@ -57,7 +57,7 @@ class Entry():
 
     # this thing really needs to be better thought of
     def format_tsv(self, search_params, romajifn=None):
-        self.colorize(search_params)
+        self.colorize(search_params, romaji=romajifn)
 
         # as of 2012-02-22, no reading or kanji field uses full-width
         # semicolon.
@@ -97,7 +97,7 @@ class Entry():
 
 
     def format_human(self, search_params, romajifn=None):
-        self.colorize(search_params)
+        self.colorize(search_params, romaji=romajifn)
 
         sep_full = fmt('；', 'subdue')
         sep_half = fmt('; ', 'subdue')
@@ -173,7 +173,7 @@ class Kanji():
 
     def colorize(self, matchreg=None):
         if matchreg:
-            self.text = color.color_regexp(matchreg, self.text, 'kanji')
+            self.text = color.color_regexp(matchreg, self.text, 'kanji', 'matchjp')
         else:
             self.text = fmt(self.text, 'kanji')
 
@@ -191,9 +191,14 @@ class Reading():
         self.frequent = frequent
         self.inf = inf
 
-    def colorize(self, matchreg=None):
+    def colorize(self, matchreg=None, romaji=False):
         if matchreg:
-            self.text = color.color_regexp(matchreg, self.text, 'reading')
+            if romaji: style='match'
+            else: style='matchjp'
+            self.text = color.color_regexp(matchreg,
+                                           self.text,
+                                           base_style='reading',
+                                           match_style=style)
         else:
             self.text = fmt(self.text, 'reading')
 

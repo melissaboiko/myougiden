@@ -25,7 +25,8 @@ STYLES={
 
     'subdue': ('yellow', None, None),
 
-    'match': ('red', None, None),
+    'match': ('red', None, ['bold']),
+    'matchjp': ('red', None, None),
 
     'info': ('magenta', None, None),
     'warning': ('yellow', None, None),
@@ -61,7 +62,7 @@ def percent(string, percent):
     else:
         return coloredpb(string, 'cyan')
 
-def color_regexp(reg_obj, longstring, base_style=None):
+def color_regexp(reg_obj, longstring, base_style=None, match_style='match'):
     '''Search regexp in longstring; return longstring with match colored.'''
 
     if not use_color:
@@ -79,5 +80,5 @@ def color_regexp(reg_obj, longstring, base_style=None):
         if base_style:
             head = fmt(head, base_style)
             tail = fmt(tail, base_style)
-        return head + fmt(m.group(), 'match') + tail
+        return head + fmt(m.group(), match_style) + tail
 
