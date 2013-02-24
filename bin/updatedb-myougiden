@@ -600,7 +600,7 @@ def insert_entries(cur, entries):
 
 
 
-def make_database(jmdict, sqlite, progress=True):
+def make_database(jmdict, sqlite, check, progress=True):
     global todo
     global donecount
 
@@ -781,7 +781,7 @@ def make_database(jmdict, sqlite, progress=True):
     con = sql.connect(tmpdb, isolation_level='IMMEDIATE')
     cur = con.cursor()
 
-    doitlive(cur)
+    doitlive(cur, check)
     create_tables(cur, jmdict.name)
 
     if progress:
@@ -807,12 +807,16 @@ def make_database(jmdict, sqlite, progress=True):
     con.commit()
     con.close()
 
-def doitlive(cur):
+def doitlive(cur, check):
     cur.execute('PRAGMA synchronous = 0;')
     cur.execute('PRAGMA journal_mode = 0;')
     cur.execute('PRAGMA temp_store = memory;')
-    cur.execute('PRAGMA foreign_keys = 0;')
-    cur.execute('PRAGMA ignore_check_constraints = 1;')
+
+    if check:
+        print('Check constraints enabled :)')
+    else:
+        cur.execute('PRAGMA foreign_keys = 0;')
+        cur.execute('PRAGMA ignore_check_constraints = 1;')
 
 
 def gzip_file(fpath):
@@ -927,6 +931,10 @@ colorize if writing to a terminal.''')
     ap.add_argument('--no-nice', action='store_false', dest='nice',
             help='''Don't lower process priority (default: try to be nice).''')
 
+    # enable foreign keys and check contraints; for dev use
+    ap.add_argument('--check', action='store_true',
+                    help=argparse.SUPPRESS)
+
     args = ap.parse_args()
 
     if args.nice:
@@ -989,7 +997,10 @@ colorize if writing to a terminal.''')
             fmt(xmlgzpath, 'parameter')))
 
     progress = sys.stdout.isatty()
-    make_database(gzip.open(xmlgzpath, 'r'), tmpdb, progress=progress)
+    make_database(gzip.open(xmlgzpath, 'r'),
+                  tmpdb,
+                  check=args.check,
+                  progress=progress)
 
     if args.delete:
         print("Deleting temporary file.")
