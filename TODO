@@ -6,6 +6,7 @@
 
  - data:
    - be sure we cover everything covered in EDICT 1, at the very least.
+   - support lsource
 
    - clean abbreviations that are not being used
      - add our own symbols: ※、＊、(P)
