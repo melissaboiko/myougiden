@@ -349,6 +349,9 @@ def create_tables(cur, jmdictxml):
       );
     ''')
 
+    # s_inf would perhaps merit its own table;
+    # however, as of 2013-02-24, no entry has more than one.
+    # so we just concatenate them for now.
     cur.execute('''
       CREATE TABLE
       senses (
@@ -732,7 +735,14 @@ def make_database(jmdict, sqlite, progress=True):
             b.sense.stagr.append(b.cdata)
 
         elif el == 's_inf':
-            b.sense.s_inf = b.cdata
+            # see comment on s_inf in maketables
+            if b.sense.s_inf:
+                print('%s: JMdict now has multiple <s_inf> at %s',
+                      fmt('WARNING', 'warning'),
+                      fmt(b.entry.ent_seq, 'parameter'))
+                b.sense.s_inf += ';' + b.cdata
+            else:
+                b.sense.s_inf = b.cdata
 
         elif el == 'gloss':
             b.sense.glosses.append(b.cdata)
