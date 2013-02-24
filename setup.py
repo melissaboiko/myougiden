@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import subprocess
 import os
+import re
 from configparser import ConfigParser
 from distutils.command.install import install
 from distutils.core import setup
@@ -13,9 +14,19 @@ config = ConfigParser()
 config.read('etc/config.ini')
 version = config['core']['version']
 
-with open('README.md') as f:
-    # hacky markdown to ResT conversion
-    longdesc=f.read().replace(":\n", "::\n")
+def md_to_rest(f):
+    '''Very hacky.'''
+
+    s = ''
+    for line in f:
+        line = re.sub(r'!\[[^]]*\]\((.*)\)', r'\1', line)
+        s += line
+
+    s = s.replace(":\n\n", "::\n\n")
+    return s
+
+with open('README.md', 'r') as f:
+    longdesc=md_to_rest(f)
 
 setup(name='myougiden',
       version=version,
