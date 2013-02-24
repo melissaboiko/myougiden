@@ -17,7 +17,7 @@ Features:
 
 myougiden saves EDICT data in sqlite3 format. This costs some
 disk space (currently about 53MiB), but with indexes, it seems to
-be quite fast.
+be reasonably fast.
 
 Sample usage
 ============
