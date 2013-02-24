@@ -32,29 +32,48 @@ class Entry():
         if search_params['field'] == 'reading':
             # if the user query only matched restricted readings,
             # we remove kanji not matching these restrictions.
-            for r in self.readings:
+            matched = [r for r in self.readings
+                       if matchreg.search(r.text)]
+
+            restricted = [r for r in matched
+                         if r.re_restr]
+            if matched == restricted:
+                # all matched readings are restricted
+
                 restrictions = []
-                if matchreg.search(r.text):
-                    # the search matches _at least_ this reading.
-                    # but: it may match other readings
-                    if not r.re_restr:
-                        # it matched a search without restrictions,
-                        # so we'll show all kanji.
-                        break
-                    else:
-                        restrictions +=  r.re_restr
+                for r in restricted:
+                    for restr in r.re_restr:
+                        restrictions.append(restr)
 
-                if restrictions:
-                    self.kanjis = [k for k in self.kanjis
-                                   if k.text in restrictions]
+                # so we remove kanjis
+                self.kanjis = [k for k in self.kanjis
+                               if k.text in restrictions]
 
-                    # also remove any senses restricted to lost kanji
-                    for s in self.senses[:]:
-                        if s.stagk:
-                            ks = [k.text for k in self.kanjis]
-                            for stagk in s.stagk:
-                                if stagk not in ks:
-                                    self.senses.remove(s)
+                # also remove any senses restricted to lost kanji
+                for s in self.senses[:]:
+                    if s.stagk:
+                        ks = [k.text for k in self.kanjis]
+                        for stagk in s.stagk:
+                            if stagk not in ks:
+                                self.senses.remove(s)
+
+            for s in self.senses[:]:
+                if s.stagr:
+                    rs = [r.text for r in matched]
+                    for stagr in s.stagr:
+                        if stagr not in rs:
+                            self.senses.remove(s)
+
+        elif search_params['field'] == 'kanji':
+            matched = [k for k in self.kanjis
+                       if matchreg.search(k.text)]
+            for s in self.senses[:]:
+                if s.stagk:
+                    ks = [k.text for k in matched]
+                    for stagk in s.stagk:
+                        if stagk not in ks:
+                            self.senses.remove(s)
+
 
     # this thing really needs to be better thought of
     def format_tsv(self, search_params, romajifn=None):
@@ -275,9 +294,7 @@ class Sense():
         if search_params and search_params['field'] == 'gloss':
             matchreg = search.matched_regexp(search_params)
             return [color.color_regexp(matchreg,
-                                       gloss,
-                                       'gloss',
-                                       'match')
+                                       gloss)
                    for gloss in self.glosses]
         else:
             return [gloss for gloss in self.glosses]
