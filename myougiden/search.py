@@ -53,7 +53,7 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
 
     where_extra = ''
     if frequent:
-        where_extra += 'AND frequent = 1'
+        where_extra += 'AND entries.frequent = 1'
 
 #    print(('''SELECT DISTINCT entries.ent_seq FROM entries %s WHERE %s.%s %s %s ;'''
 #           % (join, table, field, operator, where_extra)).replace('?', "'%s'" % query))

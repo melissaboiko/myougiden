@@ -7,6 +7,7 @@ class Entry():
     '''Equivalent to JMdict entry.'''
     def __init__(self,
                  ent_seq=None, # JMdict ID
+                 frequent=False, # similar to EDICT (P)
                  kanjis=None, # list of Kanjis()
                  readings=None, # list of Readings()
                  senses=None, # list of Senses
@@ -15,14 +16,11 @@ class Entry():
         self.kanjis = kanjis or []
         self.readings = readings or []
         self.senses = senses or []
+        self.frequent = frequent
 
     def is_frequent(self):
-        for kanji in self.kanjis:
-            if kanji.frequent:
-                return True
-        for reading in self.readings:
-            if reading.frequent:
-                return True
+        # TODO: more fine-grained
+        return self.frequent
 
     def remove_orphan_senses(self):
         '''Remove restricted senses that don't match any readings/kanjis.
@@ -515,10 +513,15 @@ def fetch_entry(cur, ent_seq):
 
         senses.append(sense)
 
+    cur.execute('SELECT frequent FROM entries WHERE ent_seq = ?;', [ent_seq])
+    frequent=cur.fetchone()[0]
+
     return Entry(ent_seq=ent_seq,
+                 frequent=frequent,
                  kanjis=kanjis,
                  readings=readings,
-                 senses=senses)
+                 senses=senses,
+                )
 
 def short_expansion(cur, abbrev):
     cur.execute(''' SELECT short_expansion FROM abbreviations WHERE abbrev = ? ;''', [abbrev])

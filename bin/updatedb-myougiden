@@ -298,10 +298,13 @@ def create_tables(cur, jmdictxml):
     # we expand each JMdict entry into several entries; so we have
     # our own ids.
     #
+    # 'frequent' is true if at least one ke_pri or re_pri has a 'good' value.
+    # this is roughly equivalent to the '(P)' flag in EDICT.
     cur.execute('''
       CREATE TABLE
       entries (
-        ent_seq INTEGER NOT NULL
+        ent_seq INTEGER NOT NULL,
+        frequent INTEGER DEFAULT 0
       );
     ''')
 
@@ -311,7 +314,7 @@ def create_tables(cur, jmdictxml):
     # rather than creating an entire separate table, we just list all
     # in a single row, separated by ';'.
     #
-    # 'frequent', from ke_pri, is roughly equivalent to the P flag in EDICT.
+    # 'frequent', from ke_pri, is set from criteria similar to (P) in EDICT.
     cur.execute('''
       CREATE TABLE
       kanjis (
@@ -513,9 +516,9 @@ def insert_entries(cur, entries):
         e.ent_seq = last_id + i
 
     cur.executemany('''INSERT INTO entries
-                    (ent_seq, ent_seq)
+                    (ent_seq, frequent)
                     VALUES (?, ?);''',
-                    [(e.ent_seq, e.ent_seq) for e in entries])
+                    [(e.ent_seq, e.frequent) for e in entries])
 
     # tuples = []
     # for e in entries:
@@ -707,6 +710,7 @@ def make_database(jmdict, sqlite, check, progress=True):
             # EDICT '(P)' criteria
             if b.cdata in ('news1', 'ichi1', 'spec1', 'gai1'):
                 b.kanji.frequent = True
+                b.entry.frequent = True
 
         elif el == 'reb':
             b.reading.text = b.cdata
@@ -723,6 +727,7 @@ def make_database(jmdict, sqlite, check, progress=True):
         elif el == 're_pri':
             if b.cdata in ('news1', 'ichi1', 'spec1', 'gai1'):
                 b.reading.frequent = True
+                b.entry.frequent = True
 
         elif el in ('pos', 'field', 'misc', 'dial'):
             add_abbrev(b.sense, el, b.cdata)
