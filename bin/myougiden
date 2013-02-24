@@ -102,7 +102,7 @@ ag.add_argument('--out-kunrei', '--ok',
 ag = ap.add_argument_group('Abbreviations help')
 ag.add_argument('--list-abbrevs', action='store_true',
         help='''List all abbreviations.''')
-ag.add_argument('--abbrev', metavar='ABBREV', default=None,
+ag.add_argument('-a', '--abbrev', metavar='ABBREV', default=None,
         help='''Print meaning of an abbreviation.''')
 
 
@@ -171,8 +171,14 @@ if args.list_abbrevs:
     print(orm.abbrevs_table(cur))
     sys.exit(0)
 elif args.abbrev:
-    print(orm.abbrev_line(cur, args.abbrev))
-    sys.exit(0)
+    a = orm.abbrev_line(cur, args.abbrev)
+    if a:
+        print(a)
+        sys.exit(0)
+    else:
+        print('Not found!')
+        sys.exit(0)
+
 elif args.version:
     print(common.version(cur))
     sys.exit(0)

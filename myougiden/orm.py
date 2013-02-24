@@ -521,8 +521,11 @@ def short_expansion(cur, abbrev):
 
 def abbrev_line(cur, abbrev):
     exp = short_expansion(cur, abbrev)
-    abbrev = fmt(abbrev, 'subdue')
-    return "%s\t%s" % (abbrev, exp)
+    if exp:
+        abbrev = fmt(abbrev, 'subdue')
+        return "%s\t%s" % (abbrev, exp)
+    else:
+        return None
 
 def abbrevs_table(cur):
     cur.execute('''
