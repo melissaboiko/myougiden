@@ -242,7 +242,7 @@ class Entry():
                               + rpar % (rsep.join(my_r)))
                 s += ksep.join(ks)
         else:
-            s += rsep.join([r.text for r in self.readings])
+            s += rsep.join([r.fmt(search_params) for r in self.readings])
 
 
         for sensenum, sense in enumerate(self.senses, start=1):
