@@ -145,7 +145,7 @@ if not args.case_sensitive:
 try:
     con, cur = database.opendb(case_sensitive=args.case_sensitive)
 except (database.DatabaseUpdating, database.DatabaseStaleUpdates) as e:
-    print(str(e) + '.')
+    print(str(e))
     sys.exit(1)
 except database.DatabaseAccessError as e:
     print('''Database error: %s.
