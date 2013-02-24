@@ -35,7 +35,7 @@ class Entry():
             for reading in self.readings:
                 reading.colorize(matchreg=matchreg, romaji=romaji)
             for kanjis in self.kanjis:
-                kanjis.colorize()
+                kanjis.colorize = True
             for sense in self.senses:
                 sense.colorize()
 
@@ -43,7 +43,7 @@ class Entry():
             for reading in self.readings:
                 reading.colorize()
             for kanjis in self.kanjis:
-                kanjis.colorize(matchreg=matchreg)
+                kanjis.colorize = True
             for sense in self.senses:
                 sense.colorize()
 
@@ -51,7 +51,7 @@ class Entry():
             for reading in self.readings:
                 reading.colorize()
             for kanjis in self.kanjis:
-                kanjis.colorize()
+                kanjis.colorize = True
             for sense in self.senses:
                 sense.colorize(matchreg=matchreg)
 
@@ -128,11 +128,15 @@ class Entry():
 
     def format_human(self, search_params, romajifn=None):
         self.process_restrictions(search_params)
+        matchreg = search.matched_regexp(search_params)
         self.colorize(search_params, romaji=romajifn)
 
-        sep_full = fmt('；', 'subdue')
-        sep_half = fmt('; ', 'subdue')
-
+        ksep = fmt('；', 'subdue')
+        rsep = fmt('、', 'subdue')
+        gsep = fmt('; ', 'subdue')
+        rpar = (fmt('（', 'subdue')
+                + '%s'
+                + fmt('）', 'subdue'))
 
         s = ''
 
@@ -140,13 +144,27 @@ class Entry():
             s += fmt('※', 'highlight') + ' '
 
         if romajifn:
-            s += sep_full.join([romajifn(r.text) for r in self.readings])
-        else:
-            s += sep_full.join([r.text for r in self.readings])
+            for r in self.readings:
+                r.text = romajifn(r.text)
 
-        if len(self.kanjis) > 0:
-            s += "\n"
-            s += sep_full.join([k.text for k in self.kanjis])
+        restricted_readings = [r for r in self.readings
+                               if r.re_restr]
+
+        if self.kanjis:
+            if not restricted_readings:
+                s += ksep.join([k.fmt(search_params) for k in self.kanjis])
+                s += rpar % (rsep.join([r.text for r in self.readings]))
+            else:
+                ks = []
+                for k in self.kanjis:
+                    my_r = [r.text for r in self.readings
+                            if not r.re_restr or k.text in r.re_restr]
+                    ks.append(k.fmt(search_params)
+                              + rpar % (rsep.join(my_r)))
+                s += ksep.join(ks)
+        else:
+            s += rsep.join([r.text for r in self.readings])
+
 
         for sensenum, sense in enumerate(self.senses, start=1):
             sn = fmt('%d.' % sensenum, 'misc')
@@ -154,7 +172,7 @@ class Entry():
             tagstr = sense.tagstr()
             if tagstr: tagstr += ' '
 
-            s += "\n%s %s%s" % (sn, tagstr, sep_half.join(sense.glosses))
+            s += "\n%s %s%s" % (sn, tagstr, gsep.join(sense.glosses))
 
         return s
 
@@ -170,12 +188,15 @@ class Kanji():
         self.frequent = frequent
         self.inf = inf
 
-    def colorize(self, matchreg=None):
-        if matchreg:
-            self.text = color.color_regexp(matchreg, self.text, 'kanji', 'matchjp')
+    def fmt(self, search_params=None):
+        if search_params and search_params['field'] == 'kanji':
+            matchreg = search.matched_regexp(search_params)
+            return color.color_regexp(matchreg,
+                                      self.text,
+                                      'kanji',
+                                      'matchjp')
         else:
-            self.text = fmt(self.text, 'kanji')
-
+            return fmt(self.text, 'kanji')
 
 class Reading():
     '''Equivalent to JMdict <r_ele>.'''
