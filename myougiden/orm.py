@@ -260,21 +260,26 @@ class Kanji():
                  kanji_id=None,
                  text=None, # = keb
                  frequent=False,
-                 inf=None):
+                 ke_inf=None):
         self.kanji_id = kanji_id
         self.text = text
         self.frequent = frequent
-        self.inf = inf
+        self.ke_inf = ke_inf
 
     def fmt(self, search_params=None):
         if search_params and search_params['field'] == 'kanji':
             matchreg = search.matched_regexp(search_params)
-            return color.color_regexp(matchreg,
+            t = color.color_regexp(matchreg,
                                       self.text,
                                       'kanji',
                                       'matchjp')
         else:
-            return fmt(self.text, 'kanji')
+            t = fmt(self.text, 'kanji')
+
+        if self.ke_inf:
+            t = t + fmt('[' + self.ke_inf + ']', 'subdue')
+        return t
+
 
 class Reading():
     '''Equivalent to JMdict <r_ele>.'''
@@ -399,12 +404,13 @@ def fetch_entry(cur, entry_id):
     readings = []
     senses = []
 
-    cur.execute('SELECT kanji_id, kanji FROM kanjis WHERE entry_id = ?;', [entry_id])
+    cur.execute('SELECT kanji_id, kanji, ke_inf, frequent FROM kanjis WHERE entry_id = ?;', [entry_id])
     for row in cur.fetchall():
-        # TODO: k_inf, kpri
         kanjis.append(Kanji(
             kanji_id=row[0],
             text=row[1],
+            ke_inf=row[2],
+            frequent=row[3],
         ))
 
     cur.execute('''SELECT

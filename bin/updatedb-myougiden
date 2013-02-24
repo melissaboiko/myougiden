@@ -310,20 +310,23 @@ def create_tables(cur, jmdictxml):
       );
     ''')
 
+    # kanji = keb
+    #
+    # there may be many ke_inf, but they're all simple abbreviations.
+    # rather than creating an entire separate table, we just list all
+    # in a single row, separated by ';'.
     cur.execute('''
       CREATE TABLE
       kanjis (
         entry_id INTEGER NOT NULL,
         kanji_id INTEGER PRIMARY KEY AUTOINCREMENT,
         kanji TEXT NOT NULL,
+        ke_inf TEXT DEFAULT NULL,
+        frequent INTEGER DEFAULT 0,
         FOREIGN KEY (entry_id) REFERENCES entries(entry_id)
       );
     ''')
 
-    # NOTICE: the DTD says re_inf*, but currently on 2 have more than 1.
-    # what's more, the contents are always a simple xml entity, which we
-    # record as abbreviations.  so we just add a list of abbreviations
-    # in the re_inf field.
     cur.execute('''
       CREATE TABLE
       readings (
@@ -513,16 +516,18 @@ def insert_entries(cur, entries):
                     VALUES (?, ?, ?);''',
                     [(e.entry_id, e.ent_seq, e.frequent) for e in entries])
 
-    # TODO: can this be done with comprehensions or iterators?
     # tuples = []
     # for e in entries:
     #     for k in e.kanjis:
     #         tuples.append((e.entry_id, k.text))
-    tuples = [(e.entry_id, k.text) for e in entries for k in e.kanjis]
+    tuples = [(e.entry_id,
+               k.text,
+               k.ke_inf,
+               k.frequent) for e in entries for k in e.kanjis]
 
     cur.executemany('''INSERT INTO kanjis
-                    (entry_id, kanji)
-                    VALUES (?, ?);''',
+                    (entry_id, kanji, ke_inf, frequent)
+                    VALUES (?, ?, ?, ?);''',
                     tuples)
 
     # flat list of all readings
@@ -667,6 +672,20 @@ def make_database(jmdict, sqlite, progress=True):
         if el == 'ent_seq':
             b.entry.ent_seq = int(b.cdata)
 
+        elif el == 'keb':
+            b.kanji.text = b.cdata
+
+        elif el == 'ke_inf':
+            for abr, exp in long_expansions.items():
+                if b.cdata == exp:
+                    abbrev = abr
+                    break
+            if b.kanji.ke_inf:
+                # see ke_inf comment in maketables
+                b.kanji.ke_inf += ';' + abbrev
+            else:
+                b.kanji.ke_inf = abbrev
+
         elif el == 'reb':
             b.reading.text = b.cdata
 
@@ -680,16 +699,13 @@ def make_database(jmdict, sqlite, progress=True):
                     break
 
             if b.reading.re_inf:
-                # see re_inf comment in maketables
+                # see ke_inf comment in maketables
                 b.reading.re_inf += ';' + abbrev
             else:
                 b.reading.re_inf = abbrev
 
         elif el == 're_nokanji':
             b.reading.re_nokanji = True
-
-        elif el == 'keb':
-            b.kanji.text = b.cdata
 
         elif el in ('ke_pri', 're_pri'):
             if b.cdata in ('news1', 'ichi1', 'spec1', 'gai1'):
