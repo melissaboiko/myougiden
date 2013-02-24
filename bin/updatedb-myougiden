@@ -253,15 +253,16 @@ def nice_self():
 def create_tables(cur, jmdictxml):
     # what about a custom collation function?
 
-    # I couldn't make executemany() work as I expected. run one by one.
     cur.execute('DROP TABLE IF EXISTS versions;')
     cur.execute('DROP TABLE IF EXISTS abbreviations;')
-
+    cur.execute('DROP TABLE IF EXISTS entries;')
     cur.execute('DROP TABLE IF EXISTS kanjis;')
     cur.execute('DROP TABLE IF EXISTS readings;')
+    cur.execute('DROP TABLE IF EXISTS readings_restrictions;')
     cur.execute('DROP TABLE IF EXISTS senses;')
+    cur.execute('DROP TABLE IF EXISTS sense_kanji_restrictions;')
+    cur.execute('DROP TABLE IF EXISTS sense_reading_restrictions;')
     cur.execute('DROP TABLE IF EXISTS glosses;')
-    cur.execute('DROP TABLE IF EXISTS entries;')
 
     cur.execute('''
       CREATE TABLE versions (
@@ -375,6 +376,18 @@ def create_tables(cur, jmdictxml):
                  );
                 ''')
 
+    # stagr
+    cur.execute('''
+                CREATE TABLE
+                sense_reading_restrictions (
+                  stagr_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  sense_id INTEGER NOT NULL,
+                  stagr TEXT,
+                  FOREIGN KEY (sense_id) REFERENCES senses(sense_id),
+                  FOREIGN KEY (stagr) REFERENCES readings(reading)
+                 );
+                ''')
+
     cur.execute('''
       CREATE TABLE
       glosses (
@@ -413,6 +426,9 @@ def create_indexes(cur):
     ''')
     cur.execute('''
       CREATE INDEX stagk_sense_id ON sense_kanji_restrictions(sense_id);
+    ''')
+    cur.execute('''
+      CREATE INDEX stagr_sense_id ON sense_reading_restrictions(sense_id);
     ''')
 
 def count_entries(jmdict):
@@ -557,6 +573,12 @@ def insert_entries(cur, entries):
                     VALUES (?, ?);''',
                     tuples)
 
+    tuples = [(s.sense_id, stagr) for s in senses for stagr in s.stagr]
+    cur.executemany('''INSERT INTO sense_reading_restrictions
+                    (sense_id, stagr)
+                    VALUES (?, ?);''',
+                    tuples)
+
     tuples = [(s.sense_id, g) for s in senses for g in s.glosses]
     cur.executemany('''INSERT INTO glosses
                     (sense_id, gloss)
@@ -632,8 +654,6 @@ def make_database(jmdict, sqlite, progress=True):
             b.reading = Reading()
         elif el == 'sense':
             b.sense = Sense()
-
-            b.sense.stagr = []
 
     def handle_cdata(data):
         nonlocal b

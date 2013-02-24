@@ -348,6 +348,15 @@ def fetch_entry(cur, entry_id):
         for row in cur.fetchall():
             sense.stagk.append(row[0])
 
+        cur.execute('''
+                    SELECT stagr
+                    FROM sense_reading_restrictions
+                    WHERE sense_id = ?;
+                    ''', [sense.sense_id]
+                   )
+        for row in cur.fetchall():
+            sense.stagr.append(row[0])
+
         cur.execute('SELECT gloss FROM glosses WHERE sense_id = ?;', [sense.sense_id])
         for row in cur.fetchall():
             sense.glosses.append(row[0])
