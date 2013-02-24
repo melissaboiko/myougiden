@@ -35,6 +35,11 @@ Some example queries:
     $ myougiden -r kanji       # forces rōmaji
     $ myougiden -a uK          # reference for EDICT-style abbreviations
 
+Screenshots
+===========
+
+![myougiden screenshot](http://namakajiri.net/pics/screenshots/myougiden.png)
+
 Installation
 ============
 
