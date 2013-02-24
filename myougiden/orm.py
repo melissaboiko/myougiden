@@ -163,38 +163,43 @@ class Entry():
     # this thing really needs to be better thought of
     def format_tsv(self, search_params, romajifn=None):
         self.process_restrictions(search_params)
-        self.colorize(search_params, romaji=romajifn)
+        matchreg = search.matched_regexp(search_params)
 
-        # as of 2012-02-22, no reading or kanji field uses full-width
+        # as of 2012-02-22, no kanji or reading field uses full-width
         # semicolon.
-        sep_full = fmt('；', 'subdue')
+        ksep = fmt('；', 'subdue')
+
+        if romajifn:
+            # ascii comma is free, too
+            rsep = fmt(',', 'subdue')
+            for r in self.readings:
+                r.romaji = romajifn
+        else:
+            rsep = fmt('；', 'subdue')
 
         # as of 2012-02-22, only one entry uses '|' .
         # and it's "c|net", which should be "CNET" anyway.
-        sep_half = fmt('|', 'subdue')
+        gsep = fmt('|', 'subdue')
 
         # escape separator
         for sense in self.senses:
             for idx, gloss in enumerate(sense.glosses):
                 # I am unreasonably proud of this solution.
-                sense.glosses[idx] = sense.glosses[idx].replace(sep_half, '¦')
+                sense.glosses[idx] = sense.glosses[idx].replace(gsep, '¦')
 
-
-        if romajifn:
-            readings_str = sep_full.join([ romajifn(r.text) for r in self.readings])
-        else:
-            readings_str = sep_full.join([ r.text for r in self.readings])
 
         s = ''
 
-        s += "%s\t%s" % (readings_str,
-                         sep_full.join([k.text for k in self.kanjis]))
+        s += rsep.join([r.fmt(search_params)
+                        for r in self.readings])
+        s += "\t" + ksep.join([k.fmt(search_params)
+                               for k in self.kanjis])
 
         for sense in self.senses:
-            tagstr = sense.tagstr()
+            tagstr = sense.tagstr(search_params)
             if tagstr: tagstr += ' '
 
-            s += "\t%s%s" % (tagstr, sep_half.join(sense.glosses))
+            s += "\t%s%s" % (tagstr, gsep.join(sense.glosses))
 
         if self.is_frequent():
             s += ' ' + fmt('(P)', 'highlight')
@@ -206,7 +211,14 @@ class Entry():
         matchreg = search.matched_regexp(search_params)
 
         ksep = fmt('；', 'subdue')
-        rsep = fmt('、', 'subdue')
+
+        if romajifn:
+            rsep = fmt(', ', 'subdue')
+            for r in self.readings:
+                r.romaji = romajifn
+        else:
+            rsep = fmt('、', 'subdue')
+
         gsep = fmt('; ', 'subdue')
         rpar = (fmt('（', 'subdue')
                 + '%s'
@@ -217,9 +229,6 @@ class Entry():
         if self.is_frequent():
             s += fmt('※', 'highlight') + ' '
 
-        if romajifn:
-            for r in self.readings:
-                r.romaji = romajifn
 
         has_re_restr = False
         for r in self.readings:
