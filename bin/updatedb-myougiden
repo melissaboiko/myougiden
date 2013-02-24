@@ -859,11 +859,27 @@ def gunzip_file(fpathgz):
         gz.close()
         os.remove(fpathgz)
 
+def download_jmdict_xml(url, localgz):
+    sys.stdout.write('''%s full dictionary data:
+From: %s
+To: %s
+Starting... ''' % (fmt('Downloading', 'info'),
+                  fmt(url, 'parameter'),
+                  fmt(localgz, 'parameter')))
+
+    urllib.request.urlretrieve(url, localgz)
+
+    print('done.')
+
+
 def fetch_jmdict_xml(localgz):
     '''Update (via rsync) or download JMdict_e.gz.
 
     localgz is the local filename.  If it doesn't end in .gz, we assume
-    it's a temp file and don't try to update it, just download.'''
+    it's a temp file and don't try to update it, just download.
+
+    Uses config['urls'].
+    '''
 
     localgz = os.path.realpath(localgz)
 
@@ -871,7 +887,9 @@ def fetch_jmdict_xml(localgz):
         localxml = re.sub(r'\.gz$', '', localgz)
 
         try:
-            print('%s remote file %s to %s' % (
+            print('''%s remote file
+From: %s
+To: %s''' % (
                 fmt('Syncing', 'info'),
                 fmt(config['urls']['jmdict_rsync'], 'parameter'),
                 fmt(localgz, 'parameter'),
@@ -886,25 +904,16 @@ def fetch_jmdict_xml(localgz):
             if os.path.isfile(localxml):
                 os.remove(localxml)
 
-            print('%s: Could not update JMdict file: %s' % (
-                fmt('ERROR', 'error'),
-                fmt(str(e), 'error')));
+            print('%s: Could not sync-update JMdict file: %s.' % (
+                fmt('WARNING', 'warning'),
+                fmt(str(e), 'warning')))
 
-            print('Will try to %s from %s ...' % (
-                fmt('download entire file', 'info'),
-                fmt(config['urls']['jmdictgz_http'], 'parameter')))
+            download_jmdict_xml(config['urls']['jmdictgz_http'], localgz)
 
-            urllib.request.urlretrieve(config['urls']['jmdictgz_http'], localgz)
 
     else:
         common.mkdir_p(os.path.dirname(localgz))
-
-        print('%s full dictionary data from %s to %s ...' % (
-            fmt('Downloading', 'info'),
-            fmt(config['urls']['jmdictgz_http'], 'parameter'),
-            fmt(localgz, 'parameter')))
-        urllib.request.urlretrieve(config['urls']['jmdictgz_http'], localgz)
-
+        download_jmdict_xml(config['urls']['jmdictgz_http'], localgz)
 
 if __name__ == '__main__':
     import argparse
@@ -985,7 +994,19 @@ colorize if writing to a terminal.''')
             os.remove(uf)
 
     if args.fetch:
-        fetch_jmdict_xml(xmlgzpath)
+        try:
+            fetch_jmdict_xml(xmlgzpath)
+        except Exception as e:
+            print('''
+%s: Could not download JMdict_e.gz as requested:
+    %s.
+Try again when the Internet's back up!  Or get it yourself and save to
+    %s
+and then you can run updatedb-myougiden without -f.'''
+                  % (fmt('ERROR', 'error'),
+                     fmt(str(e), 'error'),
+                     fmt(xmlgzpath, 'parameter')))
+            sys.exit(1)
 
     if args.delete:
         print("%s from %s, please wait..." % (

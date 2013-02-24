@@ -26,7 +26,7 @@ DARKBG={
     'matchjp': ('red', None, None),
 
     'info': ('magenta', None, None),
-    'warning': ('yellow', None, None),
+    'warning': ('yellow', None, ['bold']),
     'error': ('red', None, ['bold']),
     'parameter': ('green', None, None),
 
@@ -45,7 +45,7 @@ LIGHTBG={
     'match': ('red', None, ['bold']),
     'matchjp': ('red', None, None),
     'info': ('blue', None, None),
-    'warning': ('magenta', None, None),
+    'warning': ('magenta', None, ['bold']),
     'error': ('red', None, ['bold']),
     'parameter': ('green', None, None),
     'starting': ('red', None, ['bold']),

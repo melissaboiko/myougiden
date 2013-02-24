@@ -7,10 +7,8 @@
  - data:
    - be sure we cover everything covered in EDICT 1, at the very least.
    - support lsource
-
    - clean abbreviations that are not being used
      - add our own symbols: ※、＊、(P)
-
    - more fine-grained --frequent (support ke_pri, re_pri)
 
  - go beyond JMdict
@@ -21,9 +19,7 @@
 
  - output:
    - better wrapping for "human" output
-   - error handling:
-     - pretty message when download fails
-   - colored --help!
+   - colored --help! (argparse extension?)
 
  - better documentation
    - tsv output
