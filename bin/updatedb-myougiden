@@ -298,15 +298,11 @@ def create_tables(cur, jmdictxml):
     # we expand each JMdict entry into several entries; so we have
     # our own ids.
     #
-    # 'frequent' is roughly equivalent to the P flag in EDICT.
-    # to simplify, at the moment we're adding it to the entire entry
-    # (rather than indivually to reading/kanji pairs).
     cur.execute('''
       CREATE TABLE
       entries (
         entry_id INTEGER PRIMARY KEY,
-        ent_seq INTEGER NOT NULL,
-        frequent INTEGER DEFAULT 0
+        ent_seq INTEGER NOT NULL
       );
     ''')
 
@@ -315,6 +311,8 @@ def create_tables(cur, jmdictxml):
     # there may be many ke_inf, but they're all simple abbreviations.
     # rather than creating an entire separate table, we just list all
     # in a single row, separated by ';'.
+    #
+    # 'frequent', from ke_pri, is roughly equivalent to the P flag in EDICT.
     cur.execute('''
       CREATE TABLE
       kanjis (
@@ -512,9 +510,9 @@ def insert_entries(cur, entries):
         e.entry_id = last_id + i
 
     cur.executemany('''INSERT INTO entries
-                    (entry_id, ent_seq, frequent)
-                    VALUES (?, ?, ?);''',
-                    [(e.entry_id, e.ent_seq, e.frequent) for e in entries])
+                    (entry_id, ent_seq)
+                    VALUES (?, ?);''',
+                    [(e.entry_id, e.ent_seq) for e in entries])
 
     # tuples = []
     # for e in entries:
@@ -652,7 +650,7 @@ def make_database(jmdict, sqlite, progress=True):
         b.cdata = ''
 
         if el == 'entry':
-            b.entry = Entry(frequent=False)
+            b.entry = Entry()
         elif el == 'k_ele':
             b.kanji = Kanji()
         elif el == 'r_ele':
@@ -686,6 +684,11 @@ def make_database(jmdict, sqlite, progress=True):
             else:
                 b.kanji.ke_inf = abbrev
 
+        elif el == 'ke_pri':
+            # EDICT '(P)' criteria
+            if b.cdata in ('news1', 'ichi1', 'spec1', 'gai1'):
+                b.kanji.frequent = True
+
         elif el == 'reb':
             b.reading.text = b.cdata
 
@@ -707,9 +710,9 @@ def make_database(jmdict, sqlite, progress=True):
         elif el == 're_nokanji':
             b.reading.re_nokanji = True
 
-        elif el in ('ke_pri', 're_pri'):
+        elif el == 're_pri':
             if b.cdata in ('news1', 'ichi1', 'spec1', 'gai1'):
-                b.entry.frequent = True
+                b.reading.frequent = True
 
         elif el in ('pos', 'misc', 'dial'):
             for abr, exp in long_expansions.items():

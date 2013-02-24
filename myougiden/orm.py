@@ -11,18 +11,20 @@ class Entry():
                  kanjis=None, # list of Kanjis()
                  readings=None, # list of Readings()
                  senses=None, # list of Senses
-                 frequent=False
                 ):
         self.entry_id = entry_id
         self.ent_seq = ent_seq
         self.kanjis = kanjis or []
         self.readings = readings or []
         self.senses = senses or []
-        self.frequent = frequent
 
-    # TODO: more detailed
     def is_frequent(self):
-        return self.frequent
+        for kanji in self.kanjis:
+            if kanji.frequent:
+                return True
+        for reading in self.readings:
+            if reading.frequent:
+                return True
 
     def remove_orphan_senses(self):
         '''Remove restricted senses that don't match any readings/kanjis.
@@ -404,7 +406,13 @@ def fetch_entry(cur, entry_id):
     readings = []
     senses = []
 
-    cur.execute('SELECT kanji_id, kanji, ke_inf, frequent FROM kanjis WHERE entry_id = ?;', [entry_id])
+    cur.execute('''SELECT
+                kanji_id,
+                kanji,
+                ke_inf,
+                frequent
+                FROM kanjis
+                WHERE entry_id = ?;''', [entry_id])
     for row in cur.fetchall():
         kanjis.append(Kanji(
             kanji_id=row[0],
@@ -478,17 +486,10 @@ def fetch_entry(cur, entry_id):
 
         senses.append(sense)
 
-    cur.execute('SELECT frequent FROM entries WHERE entry_id = ?;', [entry_id])
-    if cur.fetchone()[0] == 1:
-        frequent = True
-    else:
-        frequent = False
-
     return Entry(entry_id=entry_id,
                  kanjis=kanjis,
                  readings=readings,
-                 senses=senses,
-                 frequent=frequent)
+                 senses=senses)
 
 def short_expansion(cur, abbrev):
     cur.execute(''' SELECT short_expansion FROM abbreviations WHERE abbrev = ? ;''', [abbrev])
