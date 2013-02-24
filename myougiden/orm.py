@@ -72,9 +72,18 @@ class Entry():
                         break
                     else:
                         restrictions +=  r.re_restr
+
                 if restrictions:
                     self.kanjis = [k for k in self.kanjis
                                    if k.text in restrictions]
+
+                    # also remove any senses restricted to lost kanji
+                    for s in self.senses[:]:
+                        if s.stagk:
+                            ks = [k.text for k in self.kanjis]
+                            for stagk in s.stagk:
+                                if stagk not in ks:
+                                    self.senses.remove(s)
 
     # this thing really needs to be better thought of
     def format_tsv(self, search_params, romajifn=None):
@@ -200,12 +209,13 @@ class Sense():
     '''Equivalent to JMdict <sense>.
 
     Attributes:
+    - sense_id: database ID.
     - glosses: a list of glosses (as strings).
     - pos: part-of-speech.
     - misc: other info, abbreviated.
     - dial: dialect.
     - s_inf: long case-by-case remarks.
-    - sense_id: database ID.
+    - stagk: if non-empty, sense is restricted to these kanji.
     '''
 
     def __init__(self,
@@ -215,6 +225,7 @@ class Sense():
                  dial=None,
                  s_inf=None,
                  glosses=None,
+                 stagk=None,
                 ):
         self.sense_id = sense_id
         self.pos = pos
@@ -222,6 +233,7 @@ class Sense():
         self.dial = dial
         self.s_inf = s_inf
         self.glosses = glosses or list()
+        self.stagk = stagk or list()
 
     def tagstr(self):
         '''Return a string with all information tags.
@@ -309,6 +321,15 @@ def fetch_entry(cur, entry_id):
                       misc=row[2],
                       dial=row[3],
                       s_inf=row[4])
+
+        cur.execute('''
+                    SELECT stagk
+                    FROM sense_kanji_restrictions
+                    WHERE sense_id = ?;
+                    ''', [sense.sense_id]
+                   )
+        for row in cur.fetchall():
+            sense.stagk.append(row[0])
 
         cur.execute('SELECT gloss FROM glosses WHERE sense_id = ?;', [sense.sense_id])
         for row in cur.fetchall():

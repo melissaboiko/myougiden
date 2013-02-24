@@ -363,6 +363,18 @@ def create_tables(cur, jmdictxml):
       );
     ''')
 
+    # stagk
+    cur.execute('''
+                CREATE TABLE
+                sense_kanji_restrictions (
+                  stagk_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  sense_id INTEGER NOT NULL,
+                  stagk TEXT,
+                  FOREIGN KEY (sense_id) REFERENCES senses(sense_id),
+                  FOREIGN KEY (stagk) REFERENCES kanjis(kanji)
+                 );
+                ''')
+
     cur.execute('''
       CREATE TABLE
       glosses (
@@ -398,6 +410,9 @@ def create_indexes(cur):
     ''')
     cur.execute('''
       CREATE INDEX glosses_gloss ON glosses (gloss);
+    ''')
+    cur.execute('''
+      CREATE INDEX stagk_sense_id ON sense_kanji_restrictions(sense_id);
     ''')
 
 def count_entries(jmdict):
@@ -471,6 +486,7 @@ def update_coffee(signum=None, frame=None):
     print_coffee()
 
 def insert_entries(cur, entries):
+    # in order to generate tuples later, we need to decide on IDs beforehand.
     cur.execute('''SELECT max(entry_id) FROM entries;''')
     last_id = cur.fetchone()[0] or 0
     for i, e in enumerate(entries, 1):
@@ -533,6 +549,12 @@ def insert_entries(cur, entries):
     cur.executemany('''INSERT INTO senses
                      (entry_id, sense_id, pos, misc, dial, s_inf)
                      VALUES (?, ?, ?, ?, ?, ?);''',
+                    tuples)
+
+    tuples = [(s.sense_id, stagk) for s in senses for stagk in s.stagk]
+    cur.executemany('''INSERT INTO sense_kanji_restrictions
+                    (sense_id, stagk)
+                    VALUES (?, ?);''',
                     tuples)
 
     tuples = [(s.sense_id, g) for s in senses for g in s.glosses]
@@ -611,7 +633,6 @@ def make_database(jmdict, sqlite, progress=True):
         elif el == 'sense':
             b.sense = Sense()
 
-            b.sense.stagk = []
             b.sense.stagr = []
 
     def handle_cdata(data):
