@@ -24,37 +24,6 @@ class Entry():
     def is_frequent(self):
         return self.frequent
 
-    def colorize(self, search_params, romaji=False):
-        '''Alter child elements to add color, including the matched search.'''
-
-        if not color.use_color:
-            return
-
-        matchreg = search.matched_regexp(search_params)
-        if search_params['field'] == 'reading':
-            for reading in self.readings:
-                reading.colorize(matchreg=matchreg, romaji=romaji)
-            for kanjis in self.kanjis:
-                kanjis.colorize = True
-            for sense in self.senses:
-                sense.colorize()
-
-        elif search_params['field'] == 'kanji':
-            for reading in self.readings:
-                reading.colorize()
-            for kanjis in self.kanjis:
-                kanjis.colorize = True
-            for sense in self.senses:
-                sense.colorize()
-
-        elif search_params['field'] == 'gloss':
-            for reading in self.readings:
-                reading.colorize()
-            for kanjis in self.kanjis:
-                kanjis.colorize = True
-            for sense in self.senses:
-                sense.colorize(matchreg=matchreg)
-
     def process_restrictions(self, search_params):
         matchreg = search.matched_regexp(search_params)
 
@@ -129,7 +98,6 @@ class Entry():
     def format_human(self, search_params, romajifn=None):
         self.process_restrictions(search_params)
         matchreg = search.matched_regexp(search_params)
-        self.colorize(search_params, romaji=romajifn)
 
         ksep = fmt('；', 'subdue')
         rsep = fmt('、', 'subdue')
@@ -145,19 +113,22 @@ class Entry():
 
         if romajifn:
             for r in self.readings:
-                r.text = romajifn(r.text)
+                r.romaji = romajifn
 
-        restricted_readings = [r for r in self.readings
-                               if r.re_restr]
+        has_re_restr = False
+        for r in self.readings:
+            if r.re_restr:
+                has_re_restr = True
+                break
 
         if self.kanjis:
-            if not restricted_readings:
+            if not has_re_restr:
                 s += ksep.join([k.fmt(search_params) for k in self.kanjis])
-                s += rpar % (rsep.join([r.text for r in self.readings]))
+                s += rpar % (rsep.join([r.fmt(search_params) for r in self.readings]))
             else:
                 ks = []
                 for k in self.kanjis:
-                    my_r = [r.text for r in self.readings
+                    my_r = [r.fmt(search_params) for r in self.readings
                             if not r.re_restr or k.text in r.re_restr]
                     ks.append(k.fmt(search_params)
                               + rpar % (rsep.join(my_r)))
@@ -172,8 +143,9 @@ class Entry():
             tagstr = sense.tagstr()
             if tagstr: tagstr += ' '
 
-            s += "\n%s %s%s" % (sn, tagstr, gsep.join(sense.glosses))
-
+            s += "\n%s %s%s" % (sn,
+                                tagstr,
+                                gsep.join(sense.fmt_glosses(search_params)))
         return s
 
 class Kanji():
@@ -207,6 +179,9 @@ class Reading():
                  re_restr=None,
                  re_inf=None,
                  frequent=False,
+
+                 # None or a function
+                 romaji=None,
                 ):
         self.reading_id = reading_id
         self.text = text
@@ -214,17 +189,22 @@ class Reading():
         self.re_restr = re_restr or []
         self.re_inf = re_inf
         self.frequent = frequent
+        self.romaji = romaji
 
-    def colorize(self, matchreg=None, romaji=False):
-        if matchreg:
-            if romaji: style='match'
-            else: style='matchjp'
-            self.text = color.color_regexp(matchreg,
-                                           self.text,
-                                           base_style='reading',
-                                           match_style=style)
+    def fmt(self, search_params=None):
+        if self.romaji:
+            t = self.romaji(self.text)
         else:
-            self.text = fmt(self.text, 'reading')
+            t = self.text
+
+        if search_params and search_params['field'] == 'reading':
+            matchreg = search.matched_regexp(search_params)
+            return color.color_regexp(matchreg,
+                                      t,
+                                      'reading',
+                                      'matchjp')
+        else:
+            return fmt(t, 'reading')
 
 class Sense():
     '''Equivalent to JMdict <sense>.
@@ -280,12 +260,19 @@ class Sense():
         else:
             return ''
 
-    def colorize(self, matchreg=None):
-        '''Colorizes glosses if matchreg is not None.'''
+    def fmt_glosses(self, search_params=None):
+        '''Return list of formatted strings, one per gloss.'''
 
-        if matchreg:
-            for idx, gloss in enumerate(self.glosses):
-                self.glosses[idx] = color.color_regexp(matchreg, gloss)
+        if search_params and search_params['field'] == 'gloss':
+            matchreg = search.matched_regexp(search_params)
+            return [color.color_regexp(matchreg,
+                                       gloss,
+                                       'gloss',
+                                       'match')
+                   for gloss in self.glosses]
+        else:
+            return [gloss for gloss in self.glosses]
+
 
 def fetch_entry(cur, entry_id):
     '''Return Entry object..'''
