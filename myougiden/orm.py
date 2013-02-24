@@ -332,31 +332,44 @@ class Sense():
     Attributes:
     - sense_id: database ID.
     - glosses: a list of glosses (as strings).
-    - pos: part-of-speech.
-    - misc: other info, abbreviated.
-    - dial: dialect.
-    - s_inf: long case-by-case remarks.
-    - stagk: if non-empty, sense is restricted to these kanji.
     '''
 
     def __init__(self,
                  sense_id=None,
-                 pos=None,
-                 misc=None,
-                 dial=None,
-                 s_inf=None,
+
+                 # glosses, a list of strings
                  glosses=None,
+
+                 # restrictions, as lists of strings
                  stagk=None,
                  stagr=None,
+
+                 # each is a string of abbreviations separated by ';'
+                 pos=None,
+                 field=None,
+                 misc=None,
+                 s_inf=None,
+
+                 # arbitrary string
+                 dial=None,
+
+                 # TODO
+                 # lsource=None,
                 ):
         self.sense_id = sense_id
-        self.pos = pos
-        self.misc = misc
-        self.dial = dial
-        self.s_inf = s_inf
+
         self.glosses = glosses or list()
+
         self.stagk = stagk or list()
         self.stagr = stagr or list()
+
+        self.pos = pos
+        self.field = field
+        self.misc = misc
+        self.dial = dial
+
+        self.s_inf = s_inf
+
 
     def tagstr(self, search_conditions):
         '''Return a string with all information tags.
@@ -365,12 +378,12 @@ class Sense():
 
         tagstr = ''
         tags = []
-        for attr in ('pos', 'misc', 'dial'):
+        for attr in ('pos', 'field', 'misc', 'dial'):
             tag = getattr(self, attr)
             if tag:
                 tags.append(tag)
         if len(tags) > 0:
-            tagstr += '[%s]' % (','.join(tags))
+            tagstr += '[%s]' % (';'.join(tags))
 
         if self.s_inf:
             if len(tagstr) > 0:
@@ -431,7 +444,6 @@ def fetch_entry(cur, entry_id):
                 WHERE entry_id = ?;''', [entry_id])
 
     for row in cur.fetchall():
-        # TODO: r_inf, rpri
         reading = Reading(
             reading_id=row[0],
             text=row[1],
@@ -452,15 +464,25 @@ def fetch_entry(cur, entry_id):
 
     senses = []
     cur.execute(
-        'SELECT sense_id, pos, misc, dial, s_inf FROM senses WHERE entry_id = ?;',
+        '''SELECT
+        sense_id,
+        pos,
+        field,
+        misc,
+        dial,
+        s_inf
+        FROM senses
+        WHERE entry_id = ?;''',
         [entry_id]
     )
+
     for row in cur.fetchall():
         sense = Sense(sense_id=row[0],
                       pos=row[1],
-                      misc=row[2],
-                      dial=row[3],
-                      s_inf=row[4])
+                      field=row[2],
+                      misc=row[3],
+                      dial=row[4],
+                      s_inf=row[5])
 
         cur.execute('''
                     SELECT stagk

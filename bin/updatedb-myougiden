@@ -188,7 +188,7 @@ short_expansions = {
   'vt': 'trans. verb',
   'vulg': 'vulgar',
   'vz': '-zuru ichidan verb',
-  'zool': 'zoology'
+  'zool': 'zoology',
 }
 
 # updated directly from JMdict entities.
@@ -355,6 +355,7 @@ def create_tables(cur, jmdictxml):
         entry_id INTEGER NOT NULL,
         sense_id INTEGER PRIMARY KEY AUTOINCREMENT,
         pos TEXT DEFAULT NULL,
+        field TEXT DEFAULT NULL,
         misc TEXT DEFAULT NULL,
         dial TEXT DEFAULT NULL,
         s_inf TEXT DEFAULT NULL,
@@ -563,11 +564,18 @@ def insert_entries(cur, entries):
         last_id += 1
         s.sense_id = last_id
 
-    tuples = [(e.entry_id, s.sense_id, s.pos, s.misc, s.dial, s.s_inf)
+    tuples = [(e.entry_id, s.sense_id, s.pos, s.field, s.misc, s.dial, s.s_inf)
               for e in entries for s in e.senses]
     cur.executemany('''INSERT INTO senses
-                     (entry_id, sense_id, pos, misc, dial, s_inf)
-                     VALUES (?, ?, ?, ?, ?, ?);''',
+                     (entry_id,
+                      sense_id,
+                      pos,
+                      field,
+                      misc,
+                      dial,
+                      s_inf
+                     )
+                     VALUES (?, ?, ?, ?, ?, ?, ?);''',
                     tuples)
 
     tuples = [(s.sense_id, stagk) for s in senses for stagk in s.stagk]
@@ -662,6 +670,23 @@ def make_database(jmdict, sqlite, progress=True):
         nonlocal b
         b.cdata += data
 
+    def add_abbrev(obj, attr, data):
+        '''helper function for handle_end_el.'''
+
+        abbrev = None
+        for abr, exp in long_expansions.items():
+            if data == exp:
+                abbrev = abr
+                break
+        if not abbrev:
+            raise(RuntimeError('Tried to abbrev unknown data: %s' % data))
+
+        prev = getattr(obj, attr)
+        if prev:
+            setattr(obj, attr, prev + ',' + abbrev)
+        else:
+            setattr(obj, attr, abbrev)
+
     def handle_end_el(el):
         nonlocal b
         nonlocal progress
@@ -674,15 +699,7 @@ def make_database(jmdict, sqlite, progress=True):
             b.kanji.text = b.cdata
 
         elif el == 'ke_inf':
-            for abr, exp in long_expansions.items():
-                if b.cdata == exp:
-                    abbrev = abr
-                    break
-            if b.kanji.ke_inf:
-                # see ke_inf comment in maketables
-                b.kanji.ke_inf += ';' + abbrev
-            else:
-                b.kanji.ke_inf = abbrev
+            add_abbrev(b.kanji, 'ke_inf', b.cdata)
 
         elif el == 'ke_pri':
             # EDICT '(P)' criteria
@@ -696,16 +713,7 @@ def make_database(jmdict, sqlite, progress=True):
             b.reading.re_restr.append(b.cdata)
 
         elif el == 're_inf':
-            for abr, exp in long_expansions.items():
-                if b.cdata == exp:
-                    abbrev = abr
-                    break
-
-            if b.reading.re_inf:
-                # see ke_inf comment in maketables
-                b.reading.re_inf += ';' + abbrev
-            else:
-                b.reading.re_inf = abbrev
+            add_abbrev(b.reading, 're_inf', b.cdata)
 
         elif el == 're_nokanji':
             b.reading.re_nokanji = True
@@ -714,12 +722,8 @@ def make_database(jmdict, sqlite, progress=True):
             if b.cdata in ('news1', 'ichi1', 'spec1', 'gai1'):
                 b.reading.frequent = True
 
-        elif el in ('pos', 'misc', 'dial'):
-            for abr, exp in long_expansions.items():
-                if b.cdata == exp:
-                    abbrev = abr
-                    break
-            setattr(b.sense, el, abbrev)
+        elif el in ('pos', 'field', 'misc', 'dial'):
+            add_abbrev(b.sense, el, b.cdata)
 
         elif el == 'stagk':
             b.sense.stagk.append(b.cdata)
