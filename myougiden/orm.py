@@ -6,13 +6,11 @@ from myougiden.color import fmt
 class Entry():
     '''Equivalent to JMdict entry.'''
     def __init__(self,
-                 entry_id=None, # our database-specific ID
                  ent_seq=None, # JMdict ID
                  kanjis=None, # list of Kanjis()
                  readings=None, # list of Readings()
                  senses=None, # list of Senses
                 ):
-        self.entry_id = entry_id
         self.ent_seq = ent_seq
         self.kanjis = kanjis or []
         self.readings = readings or []
@@ -412,7 +410,7 @@ class Sense():
             return [gloss for gloss in self.glosses]
 
 
-def fetch_entry(cur, entry_id):
+def fetch_entry(cur, ent_seq):
     '''Return Entry object..'''
 
     kanjis = []
@@ -425,7 +423,7 @@ def fetch_entry(cur, entry_id):
                 ke_inf,
                 frequent
                 FROM kanjis
-                WHERE entry_id = ?;''', [entry_id])
+                WHERE ent_seq = ?;''', [ent_seq])
     for row in cur.fetchall():
         kanjis.append(Kanji(
             kanji_id=row[0],
@@ -441,7 +439,7 @@ def fetch_entry(cur, entry_id):
                 frequent,
                 re_inf
                 FROM readings
-                WHERE entry_id = ?;''', [entry_id])
+                WHERE ent_seq = ?;''', [ent_seq])
 
     for row in cur.fetchall():
         reading = Reading(
@@ -472,8 +470,8 @@ def fetch_entry(cur, entry_id):
         dial,
         s_inf
         FROM senses
-        WHERE entry_id = ?;''',
-        [entry_id]
+        WHERE ent_seq = ?;''',
+        [ent_seq]
     )
 
     for row in cur.fetchall():
@@ -508,7 +506,7 @@ def fetch_entry(cur, entry_id):
 
         senses.append(sense)
 
-    return Entry(entry_id=entry_id,
+    return Entry(ent_seq=ent_seq,
                  kanjis=kanjis,
                  readings=readings,
                  senses=senses)

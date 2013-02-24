@@ -2,7 +2,7 @@ import re
 from myougiden import texttools as tt
 
 def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=False, frequent=False):
-    '''Main search function.  Return list of entry_ids.
+    '''Main search function.  Return list of ent_seqs.
 
     Field in ('kanji', 'reading', 'gloss').
     '''
@@ -42,24 +42,24 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
 
     if field == 'kanji':
         table = 'kanjis'
-        join = 'JOIN kanjis ON entries.entry_id = kanjis.entry_id'
+        join = 'JOIN kanjis ON entries.ent_seq = kanjis.ent_seq'
     elif field == 'reading':
         table = 'readings'
-        join = 'JOIN readings ON entries.entry_id = readings.entry_id'
+        join = 'JOIN readings ON entries.ent_seq = readings.ent_seq'
     elif field == 'gloss':
         table = 'glosses'
-        join = '''JOIN senses ON senses.entry_id = entries.entry_id
+        join = '''JOIN senses ON senses.ent_seq = entries.ent_seq
                   JOIN glosses ON glosses.sense_id = senses.sense_id'''
 
     where_extra = ''
     if frequent:
         where_extra += 'AND frequent = 1'
 
-#    print(('''SELECT DISTINCT entries.entry_id FROM entries %s WHERE %s.%s %s %s ;'''
+#    print(('''SELECT DISTINCT entries.ent_seq FROM entries %s WHERE %s.%s %s %s ;'''
 #           % (join, table, field, operator, where_extra)).replace('?', "'%s'" % query))
 
     cur.execute('''
-SELECT DISTINCT entries.entry_id
+SELECT DISTINCT entries.ent_seq
 FROM entries
   %s
 WHERE %s.%s %s

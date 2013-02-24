@@ -301,7 +301,6 @@ def create_tables(cur, jmdictxml):
     cur.execute('''
       CREATE TABLE
       entries (
-        entry_id INTEGER PRIMARY KEY,
         ent_seq INTEGER NOT NULL
       );
     ''')
@@ -316,25 +315,25 @@ def create_tables(cur, jmdictxml):
     cur.execute('''
       CREATE TABLE
       kanjis (
-        entry_id INTEGER NOT NULL,
+        ent_seq INTEGER NOT NULL,
         kanji_id INTEGER PRIMARY KEY AUTOINCREMENT,
         kanji TEXT NOT NULL,
         ke_inf TEXT DEFAULT NULL,
         frequent INTEGER DEFAULT 0,
-        FOREIGN KEY (entry_id) REFERENCES entries(entry_id)
+        FOREIGN KEY (ent_seq) REFERENCES entries(ent_seq)
       );
     ''')
 
     cur.execute('''
       CREATE TABLE
       readings (
-        entry_id INTEGER NOT NULL,
+        ent_seq INTEGER NOT NULL,
         reading_id INTEGER PRIMARY KEY AUTOINCREMENT,
         reading TEXT NOT NULL,
         re_nokanji INTEGER DEFAULT 0,
         frequent INTEGER DEFAULT 0,
         re_inf TEXT DEFAULT NULL,
-        FOREIGN KEY (entry_id) REFERENCES entries(entry_id)
+        FOREIGN KEY (ent_seq) REFERENCES entries(ent_seq)
       );
     ''')
 
@@ -355,14 +354,14 @@ def create_tables(cur, jmdictxml):
     cur.execute('''
       CREATE TABLE
       senses (
-        entry_id INTEGER NOT NULL,
+        ent_seq INTEGER NOT NULL,
         sense_id INTEGER PRIMARY KEY AUTOINCREMENT,
         pos TEXT DEFAULT NULL,
         field TEXT DEFAULT NULL,
         misc TEXT DEFAULT NULL,
         dial TEXT DEFAULT NULL,
         s_inf TEXT DEFAULT NULL,
-        FOREIGN KEY (entry_id) REFERENCES entries(entry_id)
+        FOREIGN KEY (ent_seq) REFERENCES entries(ent_seq)
         FOREIGN KEY (pos) REFERENCES abbreviations(abbrev)
         FOREIGN KEY (misc) REFERENCES abbreviations(abbrev)
         FOREIGN KEY (dial) REFERENCES abbreviations(abbrev)
@@ -406,13 +405,13 @@ def create_tables(cur, jmdictxml):
 def create_indexes(cur):
 
     cur.execute('''
-      CREATE INDEX kanjis_entry_id ON kanjis (entry_id);
+      CREATE INDEX kanjis_ent_seq ON kanjis (ent_seq);
     ''')
     cur.execute('''
-      CREATE INDEX readings_entry_id ON readings (entry_id);
+      CREATE INDEX readings_ent_seq ON readings (ent_seq);
     ''')
     cur.execute('''
-      CREATE INDEX senses_entry_id ON senses (entry_id);
+      CREATE INDEX senses_ent_seq ON senses (ent_seq);
     ''')
     cur.execute('''
       CREATE INDEX glosses_sense_id ON glosses (sense_id);
@@ -508,27 +507,27 @@ def update_coffee(signum=None, frame=None):
 
 def insert_entries(cur, entries):
     # in order to generate tuples later, we need to decide on IDs beforehand.
-    cur.execute('''SELECT max(entry_id) FROM entries;''')
+    cur.execute('''SELECT max(ent_seq) FROM entries;''')
     last_id = cur.fetchone()[0] or 0
     for i, e in enumerate(entries, 1):
-        e.entry_id = last_id + i
+        e.ent_seq = last_id + i
 
     cur.executemany('''INSERT INTO entries
-                    (entry_id, ent_seq)
+                    (ent_seq, ent_seq)
                     VALUES (?, ?);''',
-                    [(e.entry_id, e.ent_seq) for e in entries])
+                    [(e.ent_seq, e.ent_seq) for e in entries])
 
     # tuples = []
     # for e in entries:
     #     for k in e.kanjis:
-    #         tuples.append((e.entry_id, k.text))
-    tuples = [(e.entry_id,
+    #         tuples.append((e.ent_seq, k.text))
+    tuples = [(e.ent_seq,
                k.text,
                k.ke_inf,
                k.frequent) for e in entries for k in e.kanjis]
 
     cur.executemany('''INSERT INTO kanjis
-                    (entry_id, kanji, ke_inf, frequent)
+                    (ent_seq, kanji, ke_inf, frequent)
                     VALUES (?, ?, ?, ?);''',
                     tuples)
 
@@ -540,7 +539,7 @@ def insert_entries(cur, entries):
         last_id += 1
         r.reading_id = last_id
 
-    tuples = [(e.entry_id, 
+    tuples = [(e.ent_seq,
                r.reading_id,
                r.text,
                r.re_nokanji, 
@@ -548,7 +547,7 @@ def insert_entries(cur, entries):
                r.frequent)
               for e in entries for r in e.readings]
     cur.executemany('''INSERT INTO readings
-                    (entry_id, reading_id, reading, re_nokanji, re_inf, frequent)
+                    (ent_seq, reading_id, reading, re_nokanji, re_inf, frequent)
                     VALUES (?, ?, ?, ?, ?, ?);''',
                     tuples)
 
@@ -567,10 +566,10 @@ def insert_entries(cur, entries):
         last_id += 1
         s.sense_id = last_id
 
-    tuples = [(e.entry_id, s.sense_id, s.pos, s.field, s.misc, s.dial, s.s_inf)
+    tuples = [(e.ent_seq, s.sense_id, s.pos, s.field, s.misc, s.dial, s.s_inf)
               for e in entries for s in e.senses]
     cur.executemany('''INSERT INTO senses
-                     (entry_id,
+                     (ent_seq,
                       sense_id,
                       pos,
                       field,

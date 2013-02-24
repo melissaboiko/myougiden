@@ -279,10 +279,10 @@ if (args.field in ('auto', 'reading') and tt.is_romaji(args.query)):
     conditions = new_conditions
 
 
-chosen_search, entry_ids = search.guess(cur, conditions)
+chosen_search, ent_seqs = search.guess(cur, conditions)
 
 if chosen_search:
-    entries = [orm.fetch_entry(cur, entry_id) for entry_id in entry_ids]
+    entries = [orm.fetch_entry(cur, ent_seq) for ent_seq in ent_seqs]
 
     if args.output_mode == 'human':
         out = [ entry.format_human(search_params=chosen_search,
