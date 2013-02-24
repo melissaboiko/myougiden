@@ -127,7 +127,7 @@ if args.color == 'auto':
 color.use_color =  (args.color == 'yes')
 if color.use_color:
     if args.background == 'auto':
-        args.background = color.guess_background()
+        args.background = color.guess_background() or 'dark'
 
     if args.background == 'dark':
         pass # default
