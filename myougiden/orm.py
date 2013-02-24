@@ -25,6 +25,8 @@ class Entry():
         return self.frequent
 
     def process_restrictions(self, search_params):
+        '''Remove parts of entry not matching search_params.'''
+
         matchreg = search.matched_regexp(search_params)
 
         if search_params['field'] == 'reading':
@@ -227,6 +229,7 @@ class Sense():
                  s_inf=None,
                  glosses=None,
                  stagk=None,
+                 stagr=None,
                 ):
         self.sense_id = sense_id
         self.pos = pos
@@ -235,6 +238,7 @@ class Sense():
         self.s_inf = s_inf
         self.glosses = glosses or list()
         self.stagk = stagk or list()
+        self.stagr = stagr or list()
 
     def tagstr(self):
         '''Return a string with all information tags.
@@ -254,6 +258,11 @@ class Sense():
             if len(tagstr) > 0:
                 tagstr += ' '
             tagstr += '[%s]' % self.s_inf
+
+        if self.stagk or self.stagr:
+            if len(tagstr) > 0:
+                tagstr += ' '
+            tagstr += '〔%s〕' % '、'.join(self.stagk + self.stagr)
 
         if len(tagstr) > 0:
             return fmt(tagstr, 'subdue')
