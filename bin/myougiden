@@ -39,7 +39,8 @@ uppercase letter in query.''')
 
 ag.add_argument('-x', '--regexp', action='store_true',
                 help='''Regular expression search.  Extent limits (-e) are
-respected.''')
+respected.  Regexps currently don't work for rōmaji;
+use kana for readings.''')
 
 ag.add_argument('-e', '--extent', default='auto',
                 choices=('whole', 'word', 'partial', 'auto'),
