@@ -1,8 +1,14 @@
+ - make it faster!
+
  - query types:
    - inflection!
      - and guess
      - if only there was Mecab for Python 3...
    - whole-word for Japanese (feasible?)
+   - support rōmaji regexpes
+   - perhaps it would be nice to make composite filters like search engines:
+     - tea ceremony → matches any entry with both words "tea", "ceremoy"
+     - "tea ceremony" → match exact phrase
 
  - data:
    - be sure we cover everything covered in EDICT 1, at the very least.
