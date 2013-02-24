@@ -7,13 +7,8 @@
  - data:
    - be sure we cover everything covered in EDICT 1, at the very least.
 
-   - smarter handling of restrictions
-     - the current model that expands entries with re_restr, stagk, stagr into
-       many is workable, but can be cumbersome (e.g. too many entries for
-       紅葉).  there must be a better way of doing this.
-     - support re_nokanji (how?)
-
    - clean abbreviations that are not being used
+     - add our own symbols: ※、＊、(P)
 
    - more fine-grained --frequent (support ke_pri, re_pri)
 

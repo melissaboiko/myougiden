@@ -253,15 +253,16 @@ def nice_self():
 def create_tables(cur, jmdictxml):
     # what about a custom collation function?
 
-    # I couldn't make executemany() work as I expected. run one by one.
     cur.execute('DROP TABLE IF EXISTS versions;')
     cur.execute('DROP TABLE IF EXISTS abbreviations;')
-
+    cur.execute('DROP TABLE IF EXISTS entries;')
     cur.execute('DROP TABLE IF EXISTS kanjis;')
     cur.execute('DROP TABLE IF EXISTS readings;')
+    cur.execute('DROP TABLE IF EXISTS readings_restrictions;')
     cur.execute('DROP TABLE IF EXISTS senses;')
+    cur.execute('DROP TABLE IF EXISTS sense_kanji_restrictions;')
+    cur.execute('DROP TABLE IF EXISTS sense_reading_restrictions;')
     cur.execute('DROP TABLE IF EXISTS glosses;')
-    cur.execute('DROP TABLE IF EXISTS entries;')
 
     cur.execute('''
       CREATE TABLE versions (
@@ -319,13 +320,31 @@ def create_tables(cur, jmdictxml):
       );
     ''')
 
+    # NOTICE: the DTD says re_inf*, but currently on 2 have more than 1.
+    # what's more, the contents are always a simple xml entity, which we
+    # record as abbreviations.  so we just add a list of abbreviations
+    # in the re_inf field.
     cur.execute('''
       CREATE TABLE
       readings (
         entry_id INTEGER NOT NULL,
         reading_id INTEGER PRIMARY KEY AUTOINCREMENT,
         reading TEXT NOT NULL,
+        re_nokanji INTEGER DEFAULT 0,
+        frequent INTEGER DEFAULT 0,
+        re_inf TEXT DEFAULT NULL,
         FOREIGN KEY (entry_id) REFERENCES entries(entry_id)
+      );
+    ''')
+
+    cur.execute('''
+      CREATE TABLE
+      reading_restrictions (
+        restr_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        reading_id INTEGER NOT NULL,
+        re_restr TEXT,
+        FOREIGN KEY (reading_id) REFERENCES readings(reading_id),
+        FOREIGN KEY (re_restr) REFERENCES kanjis(kanji)
       );
     ''')
 
@@ -344,6 +363,30 @@ def create_tables(cur, jmdictxml):
         FOREIGN KEY (dial) REFERENCES abbreviations(abbrev)
       );
     ''')
+
+    # stagk
+    cur.execute('''
+                CREATE TABLE
+                sense_kanji_restrictions (
+                  stagk_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  sense_id INTEGER NOT NULL,
+                  stagk TEXT,
+                  FOREIGN KEY (sense_id) REFERENCES senses(sense_id),
+                  FOREIGN KEY (stagk) REFERENCES kanjis(kanji)
+                 );
+                ''')
+
+    # stagr
+    cur.execute('''
+                CREATE TABLE
+                sense_reading_restrictions (
+                  stagr_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  sense_id INTEGER NOT NULL,
+                  stagr TEXT,
+                  FOREIGN KEY (sense_id) REFERENCES senses(sense_id),
+                  FOREIGN KEY (stagr) REFERENCES readings(reading)
+                 );
+                ''')
 
     cur.execute('''
       CREATE TABLE
@@ -369,7 +412,9 @@ def create_indexes(cur):
     cur.execute('''
       CREATE INDEX glosses_sense_id ON glosses (sense_id);
     ''')
-
+    cur.execute('''
+      CREATE INDEX restrs_reading_id ON reading_restrictions (reading_id);
+    ''')
     cur.execute('''
       CREATE INDEX kanjis_kanji ON kanjis (kanji);
     ''')
@@ -378,6 +423,12 @@ def create_indexes(cur):
     ''')
     cur.execute('''
       CREATE INDEX glosses_gloss ON glosses (gloss);
+    ''')
+    cur.execute('''
+      CREATE INDEX stagk_sense_id ON sense_kanji_restrictions(sense_id);
+    ''')
+    cur.execute('''
+      CREATE INDEX stagr_sense_id ON sense_reading_restrictions(sense_id);
     ''')
 
 def count_entries(jmdict):
@@ -451,6 +502,7 @@ def update_coffee(signum=None, frame=None):
     print_coffee()
 
 def insert_entries(cur, entries):
+    # in order to generate tuples later, we need to decide on IDs beforehand.
     cur.execute('''SELECT max(entry_id) FROM entries;''')
     last_id = cur.fetchone()[0] or 0
     for i, e in enumerate(entries, 1):
@@ -473,9 +525,29 @@ def insert_entries(cur, entries):
                     VALUES (?, ?);''',
                     tuples)
 
-    tuples = [(e.entry_id, r.text) for e in entries for r in e.readings]
+    # flat list of all readings
+    readings = tuple(itertools.chain(*[e.readings for e in entries]))
+    cur.execute('SELECT max(reading_id) FROM readings;')
+    last_id = cur.fetchone()[0] or 0
+    for r in readings:
+        last_id += 1
+        r.reading_id = last_id
+
+    tuples = [(e.entry_id, 
+               r.reading_id,
+               r.text,
+               r.re_nokanji, 
+               r.re_inf,
+               r.frequent)
+              for e in entries for r in e.readings]
     cur.executemany('''INSERT INTO readings
-                    (entry_id, reading)
+                    (entry_id, reading_id, reading, re_nokanji, re_inf, frequent)
+                    VALUES (?, ?, ?, ?, ?, ?);''',
+                    tuples)
+
+    tuples = [(r.reading_id, restr) for r in readings for restr in r.re_restr]
+    cur.executemany('''INSERT INTO reading_restrictions
+                    (reading_id, re_restr)
                     VALUES (?, ?);''',
                     tuples)
 
@@ -495,74 +567,24 @@ def insert_entries(cur, entries):
                      VALUES (?, ?, ?, ?, ?, ?);''',
                     tuples)
 
+    tuples = [(s.sense_id, stagk) for s in senses for stagk in s.stagk]
+    cur.executemany('''INSERT INTO sense_kanji_restrictions
+                    (sense_id, stagk)
+                    VALUES (?, ?);''',
+                    tuples)
+
+    tuples = [(s.sense_id, stagr) for s in senses for stagr in s.stagr]
+    cur.executemany('''INSERT INTO sense_reading_restrictions
+                    (sense_id, stagr)
+                    VALUES (?, ?);''',
+                    tuples)
+
     tuples = [(s.sense_id, g) for s in senses for g in s.glosses]
     cur.executemany('''INSERT INTO glosses
                     (sense_id, gloss)
                     VALUES (?, ?)''',
                     tuples)
 
-def expand_entry(entry):
-    '''Treat re_restr, stagk, stagr by expanding one entry into many.'''
-
-    # readings usually apply to all kanji.
-    # if a reading has a re_restr, it applies to only that kanji.
-    #
-    # in that case, we remove it from the current entry, and create a
-    # new entry with only that kanji. so each JMdict entry (here in the
-    # parsing buffer as entry) may explode into many of our Entries
-    # (and database rows).
-    entries = []
-
-    for r in entry.readings[:]:
-        if len(r.restr) > 0:
-            extra = deepcopy(entry)
-            extra.readings = [r]
-            extra.kanjis = [k for k in extra.kanjis
-                            if k.text in r.restr]
-            entries.append(extra)
-            entry.readings.remove(r)
-
-    # only add the original entry if it has any (non-restr) readings left.
-    if len(entry.readings) > 0:
-        entries.append(entry)
-
-    # ...and now we remove from entries all their senses with either
-    # stagk or stagr, building new entries with only the appropirate
-    # readings/kanjis.
-    for entry in entries[:]:
-        for s in entry.senses:
-            if len(s.stagk) > 0:
-                kanjis = [k for k in entry.kanjis
-                          if k.text in s.stagk]
-
-                if len(kanjis) > 0:
-                    extra = deepcopy(entry)
-                    extra.kanjis = kanjis
-                    entries.append(extra)
-
-                entry.senses.remove(s)
-
-        if len(entry.senses) == 0:
-            entries.remove(entry)
-
-    for entry in entries[:]:
-        for s in entry.senses:
-            if len(s.stagr) > 0:
-                readings = [r for r in entry.readings
-                            if r.text in s.stagr]
-
-                if len(readings) > 0:
-                    extra = deepcopy(entry)
-                    extra.readings = readings
-                    entries.append(extra)
-
-                entry.senses.remove(s)
-
-        if len(entry.senses) == 0:
-            entries.remove(entry)
-
-    # TODO: what happens if a sense has _both_ stagk and stagr?
-    return entries
 
 
 def make_database(jmdict, sqlite, progress=True):
@@ -630,13 +652,8 @@ def make_database(jmdict, sqlite, progress=True):
             b.kanji = Kanji()
         elif el == 'r_ele':
             b.reading = Reading()
-            # re_restr
-            b.reading.restr = []
         elif el == 'sense':
             b.sense = Sense()
-
-            b.sense.stagk = []
-            b.sense.stagr = []
 
     def handle_cdata(data):
         nonlocal b
@@ -654,7 +671,22 @@ def make_database(jmdict, sqlite, progress=True):
             b.reading.text = b.cdata
 
         elif el == 're_restr':
-            b.reading.restr.append(b.cdata)
+            b.reading.re_restr.append(b.cdata)
+
+        elif el == 're_inf':
+            for abr, exp in long_expansions.items():
+                if b.cdata == exp:
+                    abbrev = abr
+                    break
+
+            if b.reading.re_inf:
+                # see re_inf comment in maketables
+                b.reading.re_inf += ';' + abbrev
+            else:
+                b.reading.re_inf = abbrev
+
+        elif el == 're_nokanji':
+            b.reading.re_nokanji = True
 
         elif el == 'keb':
             b.kanji.text = b.cdata
@@ -690,8 +722,7 @@ def make_database(jmdict, sqlite, progress=True):
             b.entry.senses.append(b.sense)
 
         elif el == 'entry':
-            for e in expand_entry(b.entry):
-                b.queue(e)
+            b.queue(b.entry)
 
             if b.size >= b.bufsize:
                 insert_entries(cur, b.insert_queue)

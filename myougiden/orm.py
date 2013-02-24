@@ -24,39 +24,145 @@ class Entry():
     def is_frequent(self):
         return self.frequent
 
-    def colorize(self, search_params, romaji=False):
-        '''Alter child elements to add color, including the matched search.'''
+    def remove_orphan_senses(self):
+        '''Remove restricted senses that don't match any readings/kanjis.
 
-        if not color.use_color:
-            return
+        Helper function for process_restrictions().
+        '''
+
+        # buffer
+        ts = None
+        for s in self.senses[:]:
+            if s.stagr:
+                if not ts: ts = [r.text for r in self.readings]
+                for stagr in s.stagr:
+                    if stagr not in ts:
+                        self.senses.remove(s)
+
+        ts = None
+        for s in self.senses[:]:
+            if s.stagk:
+                if not ts: ts = [k.text for k in self.kanjis]
+                for stagk in s.stagk:
+                    if stagk not in ts:
+                        self.senses.remove(s)
+
+    def remove_orphan_readings(self):
+        '''Remove restricted senses that don't match any readings/kanjis.
+
+        Helper function for process_restrictions().
+        '''
+        # buffer
+        ts = None
+
+        for r in self.readings[:]:
+            if r.re_restr:
+                if not ts: ts = [k.text for k in self.kanjis]
+                for restr in r.re_restr:
+                    if restr not in ts:
+                        self.readings.remove(r)
+
+    def process_restrictions(self, search_params):
+        '''Remove parts of entry not matching search_params.'''
 
         matchreg = search.matched_regexp(search_params)
-        if search_params['field'] == 'reading':
-            for reading in self.readings:
-                reading.colorize(matchreg=matchreg, romaji=romaji)
-            for kanjis in self.kanjis:
-                kanjis.colorize()
-            for sense in self.senses:
-                sense.colorize()
 
-        elif search_params['field'] == 'kanji':
-            for reading in self.readings:
-                reading.colorize()
-            for kanjis in self.kanjis:
-                kanjis.colorize(matchreg=matchreg)
-            for sense in self.senses:
-                sense.colorize()
+        if search_params['field'] == 'kanji':
+            # show only matched kanjis.
+            self.kanjis = [k for k in self.kanjis
+                           if matchreg.search(k.text)]
+
+            # show only readings & senses that apply to matching kanji.
+            self.remove_orphan_readings()
+            self.remove_orphan_senses()
+
+
+        if search_params['field'] == 'reading':
+            # we show all readings, even unmatched ones (matched ones will be
+            # highlighted).
+
+            # however, if all matched readings are restricted, we remove kanjis
+            # not applying to the restriction (it would be silly to show the
+            # user 黄葉 when they asked for もみじ).
+            matched = [r for r in self.readings
+                       if matchreg.search(r.text)]
+
+            restricted = [r for r in matched
+                          if r.re_restr]
+
+            if matched == restricted:
+                restrictions = []
+                for r in restricted:
+                    for restr in r.re_restr:
+                        restrictions.append(restr)
+
+                self.kanjis = [k for k in self.kanjis
+                               if k.text in restrictions]
+
+                self.remove_orphan_readings()
+                self.remove_orphan_senses()
+
+            # we DO show senses where stagr doesn't match the queried reading.
+            # the rationale is that, since we're showing all readings, it would
+            # be confusing to omit other reading's senses.  the display will
+            # show the restriction between brackets.
 
         elif search_params['field'] == 'gloss':
-            for reading in self.readings:
-                reading.colorize()
-            for kanjis in self.kanjis:
-                kanjis.colorize()
-            for sense in self.senses:
-                sense.colorize(matchreg=matchreg)
+            # consider all *matching* senses.
+            # - if at least one of them has no stagk, all kanji apply to it.
+            #   so we show all kanji.
+            # - but if all of them are restricted, we filter out all kanjis
+            #   that don't apply to any senses.
+            #
+            # likewise for readings and stagr.
+            #
+            # finally, we remove orphan senses that only applied to
+            # kanji/reading removed above.
+
+            changed=False
+            matched = []
+            for s in self.senses:
+                for g in s.glosses:
+                    if matchreg.search(g):
+                        matched.append(s)
+                        break
+
+            restricted = [s for s in matched if s.stagk]
+            if matched == restricted:
+                # then some kanji may be spurious
+
+                restrictions = []
+                for s in matched:
+                    for stagk in s.stagk:
+                        restrictions.append(stagk)
+
+                for kanji in self.kanjis[:]:
+                    if kanji.text not in restrictions:
+                        self.kanjis.remove(kanji)
+                        changed=True
+
+            restricted = [s for s in matched if s.stagr]
+            if matched == restricted:
+                # then some readings may be spurious
+
+                restrictions = []
+                for s in matched:
+                    for stagr in s.stagr:
+                        restrictions.append(stagr)
+
+                for reading in self.readings[:]:
+                    if reading.text not in restrictions:
+                        self.readings.remove(reading)
+                        changed=True
+
+            if changed:
+                 self.remove_orphan_readings()
+                 self.remove_orphan_senses()
+
 
     # this thing really needs to be better thought of
     def format_tsv(self, search_params, romajifn=None):
+        self.process_restrictions(search_params)
         self.colorize(search_params, romaji=romajifn)
 
         # as of 2012-02-22, no reading or kanji field uses full-width
@@ -95,13 +201,16 @@ class Entry():
 
         return s
 
-
     def format_human(self, search_params, romajifn=None):
-        self.colorize(search_params, romaji=romajifn)
+        self.process_restrictions(search_params)
+        matchreg = search.matched_regexp(search_params)
 
-        sep_full = fmt('；', 'subdue')
-        sep_half = fmt('; ', 'subdue')
-
+        ksep = fmt('；', 'subdue')
+        rsep = fmt('、', 'subdue')
+        gsep = fmt('; ', 'subdue')
+        rpar = (fmt('（', 'subdue')
+                + '%s'
+                + fmt('）', 'subdue'))
 
         s = ''
 
@@ -109,22 +218,40 @@ class Entry():
             s += fmt('※', 'highlight') + ' '
 
         if romajifn:
-            s += sep_full.join([romajifn(r.text) for r in self.readings])
-        else:
-            s += sep_full.join([r.text for r in self.readings])
+            for r in self.readings:
+                r.romaji = romajifn
 
-        if len(self.kanjis) > 0:
-            s += "\n"
-            s += sep_full.join([k.text for k in self.kanjis])
+        has_re_restr = False
+        for r in self.readings:
+            if r.re_restr:
+                has_re_restr = True
+                break
+
+        if self.kanjis:
+            if not has_re_restr:
+                s += ksep.join([k.fmt(search_params) for k in self.kanjis])
+                s += rpar % (rsep.join([r.fmt(search_params) for r in self.readings]))
+            else:
+                ks = []
+                for k in self.kanjis:
+                    my_r = [r.fmt(search_params) for r in self.readings
+                            if not r.re_restr or k.text in r.re_restr]
+                    ks.append(k.fmt(search_params)
+                              + rpar % (rsep.join(my_r)))
+                s += ksep.join(ks)
+        else:
+            s += rsep.join([r.text for r in self.readings])
+
 
         for sensenum, sense in enumerate(self.senses, start=1):
             sn = fmt('%d.' % sensenum, 'misc')
 
-            tagstr = sense.tagstr()
+            tagstr = sense.tagstr(search_params)
             if tagstr: tagstr += ' '
 
-            s += "\n%s %s%s" % (sn, tagstr, sep_half.join(sense.glosses))
-
+            s += "\n%s %s%s" % (sn,
+                                tagstr,
+                                gsep.join(sense.fmt_glosses(search_params)))
         return s
 
 class Kanji():
@@ -139,47 +266,70 @@ class Kanji():
         self.frequent = frequent
         self.inf = inf
 
-    def colorize(self, matchreg=None):
-        if matchreg:
-            self.text = color.color_regexp(matchreg, self.text, 'kanji', 'matchjp')
+    def fmt(self, search_params=None):
+        if search_params and search_params['field'] == 'kanji':
+            matchreg = search.matched_regexp(search_params)
+            return color.color_regexp(matchreg,
+                                      self.text,
+                                      'kanji',
+                                      'matchjp')
         else:
-            self.text = fmt(self.text, 'kanji')
-
+            return fmt(self.text, 'kanji')
 
 class Reading():
     '''Equivalent to JMdict <r_ele>.'''
     def __init__(self,
                  reading_id=None,
                  text=None, # = reb
+                 re_nokanji=False,
+                 re_restr=None,
+                 re_inf=None,
                  frequent=False,
-                 inf=None,
+
+                 # None or a function
+                 romaji=None,
                 ):
         self.reading_id = reading_id
         self.text = text
+        self.re_nokanji = re_nokanji
+        self.re_restr = re_restr or []
+        self.re_inf = re_inf
         self.frequent = frequent
-        self.inf = inf
+        self.romaji = romaji
 
-    def colorize(self, matchreg=None, romaji=False):
-        if matchreg:
-            if romaji: style='match'
-            else: style='matchjp'
-            self.text = color.color_regexp(matchreg,
-                                           self.text,
-                                           base_style='reading',
-                                           match_style=style)
+    def fmt(self, search_params=None):
+        if self.romaji:
+            t = self.romaji(self.text)
         else:
-            self.text = fmt(self.text, 'reading')
+            t = self.text
+
+        if search_params and search_params['field'] == 'reading':
+            matchreg = search.matched_regexp(search_params)
+            t = color.color_regexp(matchreg,
+                                      t,
+                                      'reading',
+                                      'matchjp')
+        else:
+            t = fmt(t, 'reading')
+
+        if self.re_nokanji:
+            t = fmt('＊', 'subdue') + t
+        if self.re_inf:
+            t = t + fmt('[' + self.re_inf + ']', 'subdue')
+        return t
+
 
 class Sense():
     '''Equivalent to JMdict <sense>.
 
     Attributes:
+    - sense_id: database ID.
     - glosses: a list of glosses (as strings).
     - pos: part-of-speech.
     - misc: other info, abbreviated.
     - dial: dialect.
     - s_inf: long case-by-case remarks.
-    - sense_id: database ID.
+    - stagk: if non-empty, sense is restricted to these kanji.
     '''
 
     def __init__(self,
@@ -189,6 +339,8 @@ class Sense():
                  dial=None,
                  s_inf=None,
                  glosses=None,
+                 stagk=None,
+                 stagr=None,
                 ):
         self.sense_id = sense_id
         self.pos = pos
@@ -196,8 +348,10 @@ class Sense():
         self.dial = dial
         self.s_inf = s_inf
         self.glosses = glosses or list()
+        self.stagk = stagk or list()
+        self.stagr = stagr or list()
 
-    def tagstr(self):
+    def tagstr(self, search_conditions):
         '''Return a string with all information tags.
 
         Automatic colors depending on myougiden.color.use_color .'''
@@ -216,17 +370,27 @@ class Sense():
                 tagstr += ' '
             tagstr += '[%s]' % self.s_inf
 
+        if self.stagk or self.stagr:
+            if len(tagstr) > 0:
+                tagstr += ' '
+            tagstr += '〔%s〕' % '、'.join(self.stagk + self.stagr)
+
         if len(tagstr) > 0:
             return fmt(tagstr, 'subdue')
         else:
             return ''
 
-    def colorize(self, matchreg=None):
-        '''Colorizes glosses if matchreg is not None.'''
+    def fmt_glosses(self, search_params=None):
+        '''Return list of formatted strings, one per gloss.'''
 
-        if matchreg:
-            for idx, gloss in enumerate(self.glosses):
-                self.glosses[idx] = color.color_regexp(matchreg, gloss)
+        if search_params and search_params['field'] == 'gloss':
+            matchreg = search.matched_regexp(search_params)
+            return [color.color_regexp(matchreg,
+                                       gloss)
+                   for gloss in self.glosses]
+        else:
+            return [gloss for gloss in self.glosses]
+
 
 def fetch_entry(cur, entry_id):
     '''Return Entry object..'''
@@ -243,13 +407,34 @@ def fetch_entry(cur, entry_id):
             text=row[1],
         ))
 
-    cur.execute('SELECT reading_id, reading FROM readings WHERE entry_id = ?;', [entry_id])
+    cur.execute('''SELECT
+                reading_id,
+                reading,
+                re_nokanji,
+                frequent,
+                re_inf
+                FROM readings
+                WHERE entry_id = ?;''', [entry_id])
+
     for row in cur.fetchall():
         # TODO: r_inf, rpri
-        readings.append(Reading(
+        reading = Reading(
             reading_id=row[0],
-            text=row[1]
-        ))
+            text=row[1],
+            re_nokanji=row[2],
+            frequent=row[3],
+            re_inf=row[4],
+        )
+
+        cur.execute('''SELECT re_restr
+                    FROM reading_restrictions
+                    WHERE reading_id = ?;''',
+                    [reading.reading_id])
+        for row in cur.fetchall():
+            reading.re_restr.append(row[0])
+
+        readings.append(reading)
+
 
     senses = []
     cur.execute(
@@ -262,6 +447,24 @@ def fetch_entry(cur, entry_id):
                       misc=row[2],
                       dial=row[3],
                       s_inf=row[4])
+
+        cur.execute('''
+                    SELECT stagk
+                    FROM sense_kanji_restrictions
+                    WHERE sense_id = ?;
+                    ''', [sense.sense_id]
+                   )
+        for row in cur.fetchall():
+            sense.stagk.append(row[0])
+
+        cur.execute('''
+                    SELECT stagr
+                    FROM sense_reading_restrictions
+                    WHERE sense_id = ?;
+                    ''', [sense.sense_id]
+                   )
+        for row in cur.fetchall():
+            sense.stagr.append(row[0])
 
         cur.execute('SELECT gloss FROM glosses WHERE sense_id = ?;', [sense.sense_id])
         for row in cur.fetchall():
