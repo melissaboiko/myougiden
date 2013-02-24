@@ -673,6 +673,21 @@ def make_database(jmdict, sqlite, progress=True):
         elif el == 're_restr':
             b.reading.re_restr.append(b.cdata)
 
+        elif el == 're_inf':
+            for abr, exp in long_expansions.items():
+                if b.cdata == exp:
+                    abbrev = abr
+                    break
+
+            if b.reading.re_inf:
+                # see re_inf comment in maketables
+                b.reading.re_inf += ';' + abbrev
+            else:
+                b.reading.re_inf = abbrev
+
+        elif el == 're_nokanji':
+            b.reading.re_nokanji = True
+
         elif el == 'keb':
             b.kanji.text = b.cdata
 

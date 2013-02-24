@@ -7,10 +7,8 @@
  - data:
    - be sure we cover everything covered in EDICT 1, at the very least.
 
-   - smarter handling of restrictions
-     - support re_nokanji (how?)
-
    - clean abbreviations that are not being used
+     - add our own symbols: ※、＊、(P)
 
    - more fine-grained --frequent (support ke_pri, re_pri)
 

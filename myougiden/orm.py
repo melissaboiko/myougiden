@@ -305,12 +305,19 @@ class Reading():
 
         if search_params and search_params['field'] == 'reading':
             matchreg = search.matched_regexp(search_params)
-            return color.color_regexp(matchreg,
+            t = color.color_regexp(matchreg,
                                       t,
                                       'reading',
                                       'matchjp')
         else:
-            return fmt(t, 'reading')
+            t = fmt(t, 'reading')
+
+        if self.re_nokanji:
+            t = fmt('＊', 'subdue') + t
+        if self.re_inf:
+            t = t + fmt('[' + self.re_inf + ']', 'subdue')
+        return t
+
 
 class Sense():
     '''Equivalent to JMdict <sense>.
