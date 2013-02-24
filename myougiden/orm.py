@@ -74,6 +74,58 @@ class Entry():
                         if stagk not in ks:
                             self.senses.remove(s)
 
+        elif search_params['field'] == 'gloss':
+            # if all gloss matches have kanji-restrictions, we remove all
+            # kanji not matching any k-restrictions.
+            #
+            # likewise for readings and r-restrictions.
+            #
+            # finally, we remove all leftover senses which are 1) restricted to
+            # certain kanji and/or readings, and 2) now orphans.
+
+            matched = []
+            for s in self.senses:
+                for g in s.glosses:
+                    if matchreg.search(g):
+                        matched.append(s)
+                        break
+
+            restricted = [s for s in matched
+                          if s.stagk or s.stagr]
+            if matched == restricted:
+                # then some kanji or readings may be spurious
+
+                k_restrictions = []
+                r_restrictions = []
+                for s in matched:
+                    for stagk in s.stagk:
+                        k_restrictions.append(stagk)
+                    for stagr in s.stagr:
+                        r_restrictions.append(stagr)
+
+                if k_restrictions:
+                    for kanji in self.kanjis[:]:
+                        if kanji.text not in k_restrictions:
+                            self.kanjis.remove(kanji)
+                if r_restrictions:
+                    for reading in self.readings[:]:
+                        if reading.text not in r_restrictions:
+                            self.readings.remove(reading)
+
+            # orphan senses
+            ks = [k.text for k in self.kanjis]
+            rs = [r.text for r in self.readings]
+
+            for s in self.senses[:]:
+                for stagk in s.stagk:
+                    if stagk not in ks:
+                        self.senses.remove(s)
+
+            for s in self.senses[:]:
+                for stagr in s.stagr:
+                    if stagr not in rs:
+                        self.senses.remove(s)
+
 
     # this thing really needs to be better thought of
     def format_tsv(self, search_params, romajifn=None):
@@ -161,7 +213,7 @@ class Entry():
         for sensenum, sense in enumerate(self.senses, start=1):
             sn = fmt('%d.' % sensenum, 'misc')
 
-            tagstr = sense.tagstr()
+            tagstr = sense.tagstr(search_params)
             if tagstr: tagstr += ' '
 
             s += "\n%s %s%s" % (sn,
@@ -259,7 +311,7 @@ class Sense():
         self.stagk = stagk or list()
         self.stagr = stagr or list()
 
-    def tagstr(self):
+    def tagstr(self, search_conditions):
         '''Return a string with all information tags.
 
         Automatic colors depending on myougiden.color.use_color .'''
