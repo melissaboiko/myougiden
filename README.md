@@ -1,7 +1,6 @@
-myougiden is an attempt at a command-line, Japanese/English
-English/Japanese dictionary.  It's based on EDICT (JMdict), the
-venerable collaborative project.  It's currently functional, but
-bare-bones.
+myougiden is a command-line, Japanese/English English/Japanese dictionary.
+It's based on EDICT (JMdict), the venerable collaborative project.  It's
+currently functional, if a bit rough in the edges.
 
 Features:
  - Fully Unicode-aware.
@@ -9,10 +8,12 @@ Features:
  - Partial, full, and whole-word queries.
  - Optional rōmaji input and output.
  - Intelligently find out what kind of query is intended.
- - Option for tab-separated output, easily manipulable with Unix tools.
+ - Option for tab-separated output, easily manipulable with Unix tools. (beta)
  - Full color output, including partial match highlighting.  No seriously, this
    thing has a *lot* of color.  I mean we're talking Takashi Murakami material
    here.
+ - Handles JMdict restricted readings and senses intelligently.
+ - Auto-pager, auto-color, auto-nice, and other small niceties.
 
 myougiden saves EDICT data in sqlite3 format. This costs some
 disk space (currently about 53MiB), but with indexes, it seems to
@@ -32,7 +33,7 @@ Some example queries:
     $ myougiden -x '茶.'       # regexp search
     $ myougiden sakura         # if no match is found, treat as rōmaji
     $ myougiden -r kanji       # forces rōmaji
-    $ myougiden --abbr uK      # reference for EDICT-style abbreviations
+    $ myougiden -a uK          # reference for EDICT-style abbreviations
 
 Installation
 ============

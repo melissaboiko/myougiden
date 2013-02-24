@@ -14,7 +14,7 @@ config.read('etc/config.ini')
 version = config['core']['version']
 
 with open('README.md') as f:
-      # hacky markdown to ResT
+    # hacky markdown to ResT conversion
     longdesc=f.read().replace(":\n", "::\n")
 
 setup(name='myougiden',
@@ -33,7 +33,7 @@ setup(name='myougiden',
           'termcolor',
           ],
       classifiers=[
-          'Development Status :: 3 - Alpha',
+          'Development Status :: 4 - Beta',
           'Environment :: Console',
           'Intended Audience :: Education',
           'Intended Audience :: End Users/Desktop',
