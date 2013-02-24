@@ -55,8 +55,30 @@ class Entry():
             for sense in self.senses:
                 sense.colorize(matchreg=matchreg)
 
+    def process_restrictions(self, search_params):
+        matchreg = search.matched_regexp(search_params)
+
+        if search_params['field'] == 'reading':
+            # if the user query only matched restricted readings,
+            # we remove kanji not matching these restrictions.
+            for r in self.readings:
+                restrictions = []
+                if matchreg.search(r.text):
+                    # the search matches _at least_ this reading.
+                    # but: it may match other readings
+                    if not r.re_restr:
+                        # it matched a search without restrictions,
+                        # so we'll show all kanji.
+                        break
+                    else:
+                        restrictions +=  r.re_restr
+                if restrictions:
+                    self.kanjis = [k for k in self.kanjis
+                                   if k.text in restrictions]
+
     # this thing really needs to be better thought of
     def format_tsv(self, search_params, romajifn=None):
+        self.process_restrictions(search_params)
         self.colorize(search_params, romaji=romajifn)
 
         # as of 2012-02-22, no reading or kanji field uses full-width
@@ -95,8 +117,8 @@ class Entry():
 
         return s
 
-
     def format_human(self, search_params, romajifn=None):
+        self.process_restrictions(search_params)
         self.colorize(search_params, romaji=romajifn)
 
         sep_full = fmt('；', 'subdue')
@@ -247,13 +269,34 @@ def fetch_entry(cur, entry_id):
             text=row[1],
         ))
 
-    cur.execute('SELECT reading_id, reading FROM readings WHERE entry_id = ?;', [entry_id])
+    cur.execute('''SELECT
+                reading_id,
+                reading,
+                re_nokanji,
+                frequent,
+                re_inf
+                FROM readings
+                WHERE entry_id = ?;''', [entry_id])
+
     for row in cur.fetchall():
         # TODO: r_inf, rpri
-        readings.append(Reading(
+        reading = Reading(
             reading_id=row[0],
-            text=row[1]
-        ))
+            text=row[1],
+            re_nokanji=row[2],
+            frequent=row[3],
+            re_inf=row[4],
+        )
+
+        cur.execute('''SELECT re_restr
+                    FROM reading_restrictions
+                    WHERE reading_id = ?;''',
+                    [reading.reading_id])
+        for row in cur.fetchall():
+            reading.re_restr.append(row[0])
+
+        readings.append(reading)
+
 
     senses = []
     cur.execute(
