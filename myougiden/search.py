@@ -42,23 +42,23 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
 
     if field == 'kanji':
         table = 'kanjis'
-        join = 'NATURAL JOIN kanjis'
+        join = 'JOIN kanjis ON entries.entry_id = kanjis.entry_id'
     elif field == 'reading':
         table = 'readings'
-        join = 'NATURAL JOIN readings'
+        join = 'JOIN readings ON entries.entry_id = readings.entry_id'
     elif field == 'gloss':
         table = 'glosses'
-        join = 'NATURAL JOIN senses NATURAL JOIN glosses'
+        join = 'JOIN glosses ON entries.entry_id = glosses.entry_id'
 
     where_extra = ''
     if frequent:
         where_extra += 'AND frequent = 1'
 
-#     print(('SELECT DISTINCT entry_id FROM entries %s WHERE %s.%s %s %s ;'
+#    print(('''SELECT DISTINCT entries.entry_id FROM entries %s WHERE %s.%s %s %s ;'''
 #           % (join, table, field, operator, where_extra)).replace('?', "'%s'" % query))
 
     cur.execute('''
-SELECT DISTINCT entry_id
+SELECT DISTINCT entries.entry_id
 FROM entries
   %s
 WHERE %s.%s %s
