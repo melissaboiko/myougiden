@@ -758,12 +758,13 @@ def make_database(jmdict, sqlite, progress=True):
 
             if b.size >= b.bufsize:
                 insert_entries(cur, b.insert_queue)
+                if progress: donecount += b.size
                 b.clear()
 
-            if progress: donecount += 1
 
         elif el == 'JMdict':
             insert_entries(cur, b.insert_queue)
+            if progress: donecount += b.size
             b.clear()
 
 
@@ -787,13 +788,19 @@ def make_database(jmdict, sqlite, progress=True):
         sys.stdout.write("Counting entries...")
         todo = count_entries(jmdict)
         jmdict.seek(0)
-        print(" %s to do." % fmt(str(todo), 'info'))
+        print(" %s to update." % fmt(str(todo), 'info'))
 
         print_coffee()
         signal.signal(signal.SIGALRM, update_coffee)
         signal.alarm(1)
 
     p.ParseFile(jmdict)
+
+    if progress:
+        update_coffee()
+        signal.signal(signal.SIGALRM, signal.SIG_IGN)
+
+    print('%s...' % fmt('Creating indexes', 'info'))
     create_indexes(cur)
 
     cur.close()
