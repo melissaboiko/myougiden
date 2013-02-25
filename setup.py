@@ -11,7 +11,7 @@ if dirname != '':
     os.chdir(os.path.dirname(__file__))
 
 config = ConfigParser()
-config.read('etc/config.ini')
+config.read('etc/myougiden/config.ini')
 version = config.get('core', 'version')
 
 def md_to_rest(f):
@@ -37,7 +37,7 @@ setup(name='myougiden',
       url='https://github.com/leoboiko/myougiden',
       packages=['myougiden'],
       scripts=['bin/myougiden', 'bin/updatedb-myougiden'],
-      data_files=[('etc/myougiden/', ['etc/config.ini'])],
+      data_files=[('etc/myougiden/', ['etc/myougiden/config.ini'])],
       license='GPLv3',
       install_requires=[
           'romkan',

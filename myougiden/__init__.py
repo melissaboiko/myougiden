@@ -1,26 +1,33 @@
 import configparser
 import re
 import os
+import sys
 
-def read_config():
-    cp = configparser.ConfigParser()
+def read_config(prefix, rel='etc/myougiden/config.ini'):
+    path = os.path.join(prefix, rel)
+    if os.path.isfile(path):
+        cp = configparser.ConfigParser()
+        cp.read(path)
+        cp.set('paths', 'prefix', prefix)
+        return cp
+    else:
+        return None
+
+def find_config():
+    # detect installation prefix. is there a better way of doing this?
+
     dirname = os.path.dirname(__file__)
 
-    # default for running from source dir
-    prefix = os.path.realpath(os.path.join(dirname, '..'))
-    config_path = os.path.join(prefix, 'etc/config.ini')
-
-    # detect installation prefix.
-    # is there a better way of doing this?
+    prefixes = []
+    prefixes.append(os.path.realpath(os.path.join(dirname, '..')))
     if re.search('/lib/', dirname):
-        prefix = re.sub('/lib/.*', '', dirname)
-        config_path = os.path.join(prefix, 'etc/myougiden/config.ini')
+        prefixes.append(re.sub('/lib/.*', '', dirname))
+    prefixes.append(sys.prefix)
 
-    if not os.path.isfile(config_path):
-        raise RuntimeError("ERROR: couldn't find config.ini at %s" % config_path)
+    for prefix in prefixes:
+        cp = read_config(prefix)
+        if cp: return cp
 
-    cp.read(os.path.join(prefix, config_path))
-    cp.set('paths','prefix',prefix)
-    return cp
+    return None
 
-config = read_config()
+config = find_config()

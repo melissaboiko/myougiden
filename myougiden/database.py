@@ -5,6 +5,7 @@ import sqlite3 as sql
 
 from myougiden import config
 from myougiden.texttools import get_regexp
+from myougiden.color import fmt
 
 def regexp_sensitive(pattern, field):
     '''SQL hook function for case-sensitive regexp matching.'''
@@ -38,18 +39,17 @@ class DatabaseMissing(DatabaseAccessError):
 class DatabaseWrongVersion(DatabaseAccessError):
     '''Database is of wrong version.'''
     pass
-class DatabaseUpdating(DatabaseAccessError):
-    '''Database is currently updating.'''
-    pass
 class DatabaseStaleUpdates(DatabaseAccessError):
     '''Temporary files left, updating process aborted anormally.'''
     pass
 
-def opendb(case_sensitive=False):
-    '''Test and open SQL database; returns (con, cur).
+def test_database_tempfiles():
+    '''Return values:
 
-    Raises DatabaseAccessError subclass if database can't be used for any
-    reason.'''
+       - None: no temp file.
+       - 'updating': updatedb-myougiden seems to be running.
+       - 'stale': updatedb-myougiden seems to have been interrupted.
+    '''
 
     temps = glob(config.get('paths','database') + '.new.*')
     if temps:
@@ -60,8 +60,22 @@ def opendb(case_sensitive=False):
             try:
                 os.getpgid(pid)
             except OSError:
-                raise DatabaseStaleUpdates('updatedb-myougiden was interrupted; please run again')
-        raise DatabaseUpdating('updatedb-myougiden is running, please wait a while :)')
+                return 'stale'
+        return 'updating'
+    return None
+
+def opendb(case_sensitive=False):
+    '''Test and open SQL database; returns (con, cur).
+
+    Raises DatabaseAccessError subclass if database can't be used for any
+    reason.'''
+
+    temps = test_database_tempfiles()
+    if temps == 'stale':
+        raise DatabaseStaleUpdates('updatedb-myougiden was interrupted; please run again')
+    elif temps == 'updating':
+        print("%s: updatedb-myougiden is running, please wait a while :)" %
+              fmt('WARNING', 'warning'))
 
     if not os.path.isfile(config.get('paths','database')):
         raise DatabaseMissing('Could not find ' + config.get('paths','database'))

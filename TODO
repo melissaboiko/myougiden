@@ -4,8 +4,16 @@
    - inflection!
      - and guess
      - if only there was Mecab for Python 3...
+       - wrapper over binary?
+
+   - wouldn't it make sense for automatic partial matches to try matching the
+     beginning first?
+     - add a "beginning" search = like 'query%'
+
    - whole-word for Japanese (feasible?)
    - support rōmaji regexpes
+     - or at least warn
+
    - perhaps it would be nice to make composite filters like search engines:
      - tea ceremony → matches any entry with both words "tea", "ceremoy"
      - "tea ceremony" → match exact phrase
@@ -16,6 +24,7 @@
    - clean abbreviations that are not being used
      - add our own symbols: ※、＊、(P)
    - more fine-grained --frequent (support ke_pri, re_pri)
+   - support all JMdict languages
 
  - go beyond JMdict
    - pitch-accent data (from where?)
@@ -31,6 +40,7 @@
  - better documentation
    - tsv output
    - manpage?
+   - about time to start a changelog...
 
  - config file support?
    - and option --saveconf

@@ -26,7 +26,7 @@ function next_version()
 
 set -e
 cd $(dirname "$0")/..
-config="etc/config.ini"
+config="etc/myougiden/config.ini"
 
 if [ "$1" ]; then
   newversion="$1"
