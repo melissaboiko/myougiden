@@ -1,6 +1,7 @@
 import termcolor
 import os
 import re
+import sys
 
 # don't you love globals
 use_color = False
@@ -140,8 +141,11 @@ def guess_background():
                         return 'light'
                     break
 
-    if os.getenv('DISPLAY'):
+    if os.getenv('DISPLAY') and sys.platform not in ('darwin', 'mac'):
         # on X there'x xrdb, but it seems little reliable here. last guess.
+
+        # we also don't run this test on OS X (darwin), since it triggers the X
+        # server and slow down a lot.
         from myougiden import common
         xrdb = common.which('xrdb')
         if xrdb:
