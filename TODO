@@ -42,6 +42,8 @@
  - localization
    - Japanese interface
 
+ - unit tests
+
  - alternative backends?
   - better benchmarks to compare them
   - option to auto-compress/decompress database
