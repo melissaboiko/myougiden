@@ -203,8 +203,11 @@ todo=None
 # rather than using transactions, locks and so on, it was found to be faster to
 # just remove the file. so we create a new database, and move it over the old
 # one on success.
-tmpdb = "%s.new.%d" % (config.get('paths','database'), os.getpid())
-to_delete = [tmpdb]
+to_delete = []
+tmpdb=None
+if config:
+    tmpdb = "%s.new.%d" % (config.get('paths','database'), os.getpid())
+    to_delete.append(tmpdb)
 
 # if problems are found, we just delete the temp database.
 def cleanup():
@@ -213,8 +216,9 @@ def cleanup():
             os.remove(f)
 
     # sqlite creates "dbname-journal" files
-    for path in glob(tmpdb + '*'):
-        os.remove(path)
+    if tmpdb:
+        for path in glob(tmpdb + '*'):
+            os.remove(path)
 
 atexit.register(cleanup)
 
@@ -922,18 +926,26 @@ To: %s''' % (
 
 if __name__ == '__main__':
     import argparse
+
+    # let --help & option parsing work even if config.ini not found
+    if config:
+        jmdictgz_http = config.get('urls', 'jmdictgz_http')
+        jmdictgz = config.get('paths', 'jmdictgz')
+    else:
+        jmdictgz_http = jmdictgz = '(Error: config.ini not found!)'
+
     ap = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 
     ap.add_argument('-f', '--fetch', action='store_true',
                     help=('''Try to fetch JMdict_e.gz from
-%s .''' % config.get('urls','jmdictgz_http')))
+%s .''' % jmdictgz_http))
 
     ap.add_argument('-k', '--delete', action='store_true',
                     help='''Delete downloaded JMdict_e.gz file after fetching.
 If not set, it will be kept to speed up future updates.''')
 
     ap.add_argument('-j', '--jmdict',
-                    default=config.get('paths','jmdictgz'),
+                    default=jmdictgz,
                     metavar='PATH',
                     help='''Path of local JMdict_e.gz file. Default:
 %(default)s .''')
@@ -951,18 +963,19 @@ colorize if writing to a terminal.''')
 
     args = ap.parse_args()
 
-    if args.nice:
-        nice_self()
-
-    localxml_exists = os.path.isfile(args.jmdict)
-    temp_xml = False
-
     if args.color == 'auto':
         if sys.stdout.isatty():
             args.color = 'yes'
         else:
             args.color = 'no'
+
     if args.color == 'yes': color.use_color = True
+    if not config:
+        print('%s: config.ini not found!'% fmt('ERROR', 'error'))
+        sys.exit(1)
+
+    localxml_exists = os.path.isfile(args.jmdict)
+    temp_xml = False
 
     if not localxml_exists and not args.fetch:
         # assume no one would want to call the script just to be told
@@ -997,6 +1010,9 @@ colorize if writing to a terminal.''')
                 fmt('Removing stale file', 'info'),
                 fmt(uf, 'parameter')))
             os.remove(uf)
+
+    if args.nice:
+        nice_self()
 
     if args.fetch:
         try:

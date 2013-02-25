@@ -11,6 +11,7 @@ from myougiden import orm
 from myougiden import common
 from myougiden import texttools as tt
 from myougiden import search
+from myougiden.color import fmt
 
 ap = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 
@@ -142,12 +143,17 @@ if not args.case_sensitive:
     if re.search("[A-Z]", args.query):
         args.case_sensitive = True
 
+if not config:
+    print('%s: Could not find config.ini!' % fmt('ERROR', 'error'))
+
+    # print version regardless
+    if args.version:
+        print(common.version(None))
+    sys.exit(2)
+
 # try to open database
 try:
     con, cur = database.opendb(case_sensitive=args.case_sensitive)
-except (database.DatabaseUpdating, database.DatabaseStaleUpdates) as e:
-    print(str(e))
-    sys.exit(1)
 except database.DatabaseAccessError as e:
     print('''Database error: %s.
 Expected database version %s at:
@@ -165,12 +171,21 @@ you might want to add the update command to cron (for example, in
 /etc/cron.weekly/myougiden ).'''
     % (str(e), config.get('core','dbversion'), config.get('paths','database')))
 
+    if args.version:
+        print()
+        print(common.version(None))
     sys.exit(2)
 
+
 # handle short commands first.
-if args.list_abbrevs:
+if args.version:
+    print(common.version(cur))
+    sys.exit(0)
+
+elif args.list_abbrevs:
     print(orm.abbrevs_table(cur))
     sys.exit(0)
+
 elif args.abbrev:
     a = orm.abbrev_line(cur, args.abbrev)
     if a:
@@ -180,14 +195,10 @@ elif args.abbrev:
         print('Not found!')
         sys.exit(0)
 
-elif args.version:
-    print(common.version(cur))
-    sys.exit(0)
-
 # handle query guesswork
 if args.query == '':
     ap.print_help()
-    sys.exit(1)
+    sys.exit(2)
 
 # 'word' doesn't work for Jap. anyway, and 'whole' is much faster.
 if args.extent == 'word' and args.field in ('kanji', 'reading'):

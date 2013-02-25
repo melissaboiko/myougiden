@@ -52,13 +52,24 @@ def version(cur):
     except ImportError:
         psutil_version = None
 
-    cur.execute('''
-    SELECT dbversion, jmdict_mtime
-    FROM versions;
-    ''')
-    row = cur.fetchone()
-    dbversion = row[0]
-    jmdict_mtime = row[1]
+    if cur:
+        cur.execute('''
+                    SELECT dbversion, jmdict_mtime
+                    FROM versions;
+                    ''')
+        row = cur.fetchone()
+        dbversion = fmt(row[0], 'parameter')
+        jmdict_mtime = fmt(row[1], 'parameter')
+    else:
+        dbversion = fmt('Database not found!', 'error')
+        jmdict_mtime = fmt('Database not found!', 'error')
+
+    if config:
+        version = fmt(config.get('core','version'), 'parameter')
+        prefix = fmt(config.get('paths','prefix'), 'parameter')
+    else:
+        version = fmt('Config not found!', 'error')
+        prefix = fmt('Config not found!', 'error')
 
     scripts = {}
     for s in ('gzip', 'rsync', 'nice', 'ionice'):
@@ -85,13 +96,13 @@ External programs:
   nice: %s
   ionice: %s
 '''.strip() % (
-    fmt(config.get('core','version'), 'parameter'),
-    fmt(dbversion, 'parameter'),
-    fmt(jmdict_mtime, 'parameter'),
+    version,
+    dbversion,
+    jmdict_mtime,
     fmt(platform.python_version(), 'parameter'),
     fmt(platform.platform(), 'parameter'),
 
-    fmt(config.get('paths','prefix'), 'parameter'),
+    prefix,
 
     fmt(romkan.__version__, 'parameter'),
     # fmt(termcolor.__version__, 'parameter'),
