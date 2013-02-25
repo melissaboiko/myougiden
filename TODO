@@ -16,6 +16,7 @@
    - clean abbreviations that are not being used
      - add our own symbols: ※、＊、(P)
    - more fine-grained --frequent (support ke_pri, re_pri)
+   - support all JMdict languages
 
  - go beyond JMdict
    - pitch-accent data (from where?)
