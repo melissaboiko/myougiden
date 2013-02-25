@@ -86,7 +86,7 @@ install it manually like this:
 
 Now you have a pip-3.1 to install any python3 pip packages!
 
-Python < 3.1 needs the package `argparse` :
+Python ≤ 3.1 needs the package `argparse` :
 
     $ sudo pip-3.1 install argparse
 
