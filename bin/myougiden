@@ -163,7 +163,7 @@ It will take a while, but lookups afterwards will be fast.
 JMdict is frequently updated.  If you'd like to keep up with new entries,
 you might want to add the update command to cron (for example, in
 /etc/cron.weekly/myougiden ).'''
-    % (str(e), config['core']['dbversion'], config['paths']['database']))
+    % (str(e), config.get('core','dbversion'), config.get('paths','database')))
 
     sys.exit(2)
 

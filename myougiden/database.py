@@ -51,10 +51,10 @@ def opendb(case_sensitive=False):
     Raises DatabaseAccessError subclass if database can't be used for any
     reason.'''
 
-    temps = glob(config['paths']['database'] + '.new.*')
+    temps = glob(config.get('paths','database') + '.new.*')
     if temps:
         for temp in temps:
-            m = re.match(config['paths']['database'] + '.new.([0-9]*)',
+            m = re.match(config.get('paths','database') + '.new.([0-9]*)',
                          temp)
             pid = int(m.group(1))
             try:
@@ -63,11 +63,11 @@ def opendb(case_sensitive=False):
                 raise DatabaseStaleUpdates('updatedb-myougiden was interrupted; please run again')
         raise DatabaseUpdating('updatedb-myougiden is running, please wait a while :)')
 
-    if not os.path.isfile(config['paths']['database']):
-        raise DatabaseMissing('Could not find ' + config['paths']['database'])
+    if not os.path.isfile(config.get('paths','database')):
+        raise DatabaseMissing('Could not find ' + config.get('paths','database'))
 
     try:
-        con = sql.connect(config['paths']['database'])
+        con = sql.connect(config.get('paths','database'))
         cur = con.cursor()
     except sql.OperationalError as e:
         raise DatabaseAccessError(str(e))
@@ -78,7 +78,7 @@ def opendb(case_sensitive=False):
     except sql.OperationalError:
         raise DatabaseAccessError("Couldn't read database to check version")
 
-    if dbversion != config['core']['dbversion']:
+    if dbversion != config.get('core','dbversion'):
         raise DatabaseWrongVersion('Incorrect database version: %s' % dbversion)
 
     if case_sensitive:

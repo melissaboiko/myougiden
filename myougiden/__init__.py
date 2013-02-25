@@ -17,7 +17,7 @@ def read_config():
         config_path = 'etc/myougiden/config.ini'
 
     cp.read(os.path.join(prefix, config_path))
-    cp['paths']['prefix'] = prefix
+    cp.set('paths','prefix',prefix)
     return cp
 
 config = read_config()

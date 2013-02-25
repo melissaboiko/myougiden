@@ -12,7 +12,7 @@ if dirname != '':
 
 config = ConfigParser()
 config.read('etc/config.ini')
-version = config['core']['version']
+version = config.get('core', 'version')
 
 def md_to_rest(f):
     '''Very hacky.'''

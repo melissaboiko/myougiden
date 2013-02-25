@@ -203,7 +203,7 @@ todo=None
 # rather than using transactions, locks and so on, it was found to be faster to
 # just remove the file. so we create a new database, and move it over the old
 # one on success.
-tmpdb = "%s.new.%d" % (config['paths']['database'], os.getpid())
+tmpdb = "%s.new.%d" % (config.get('paths','database'), os.getpid())
 to_delete = [tmpdb]
 
 # if problems are found, we just delete the temp database.
@@ -274,7 +274,7 @@ def create_tables(cur, jmdictxml):
     cur.execute('''
       INSERT INTO versions VALUES (?, ?);
     ''',
-                [config['core']['dbversion'],
+                [config.get('core','dbversion'),
                  time.strftime('%Y-%m-%d',
                                time.gmtime(os.path.getmtime(jmdictxml)))]
                )
@@ -607,7 +607,7 @@ def make_database(jmdict, sqlite, check, progress=True):
     global todo
     global donecount
 
-    common.mkdir_p(os.path.dirname(config['paths']['database']))
+    common.mkdir_p(os.path.dirname(config.get('paths','database')))
 
 
     class Buffer:
@@ -883,7 +883,7 @@ def fetch_jmdict_xml(localgz):
     localgz is the local filename.  If it doesn't end in .gz, we assume
     it's a temp file and don't try to update it, just download.
 
-    Uses config['urls'].
+    Uses config.get('urls','jmdict_rsync')
     '''
 
     localgz = os.path.realpath(localgz)
@@ -896,12 +896,12 @@ def fetch_jmdict_xml(localgz):
 From: %s
 To: %s''' % (
                 fmt('Syncing', 'info'),
-                fmt(config['urls']['jmdict_rsync'], 'parameter'),
+                fmt(config.get('urls','jmdict_rsync'), 'parameter'),
                 fmt(localgz, 'parameter'),
             ))
 
             gunzip_file(localgz)
-            st = subprocess.call(['rsync', '--progress', '-v', '-z', config['urls']['jmdict_rsync'], localxml])
+            st = subprocess.call(['rsync', '--progress', '-v', '-z', config.get('urls','jmdict_rsync'), localxml])
             if st != 0:
                 raise RuntimeError("rsync returned %d" % st)
             gzip_file(localxml)
@@ -913,12 +913,12 @@ To: %s''' % (
                 fmt('WARNING', 'warning'),
                 fmt(str(e), 'warning')))
 
-            download_jmdict_xml(config['urls']['jmdictgz_http'], localgz)
+            download_jmdict_xml(config.get('urls','jmdictgz_http'), localgz)
 
 
     else:
         common.mkdir_p(os.path.dirname(localgz))
-        download_jmdict_xml(config['urls']['jmdictgz_http'], localgz)
+        download_jmdict_xml(config.get('urls','jmdictgz_http'), localgz)
 
 if __name__ == '__main__':
     import argparse
@@ -926,14 +926,14 @@ if __name__ == '__main__':
 
     ap.add_argument('-f', '--fetch', action='store_true',
                     help=('''Try to fetch JMdict_e.gz from
-%s .''' % config['urls']['jmdictgz_http']))
+%s .''' % config.get('urls','jmdictgz_http')))
 
     ap.add_argument('-k', '--delete', action='store_true',
                     help='''Delete downloaded JMdict_e.gz file after fetching.
 If not set, it will be kept to speed up future updates.''')
 
     ap.add_argument('-j', '--jmdict',
-                    default=config['paths']['jmdictgz'],
+                    default=config.get('paths','jmdictgz'),
                     metavar='PATH',
                     help='''Path of local JMdict_e.gz file. Default:
 %(default)s .''')
@@ -978,9 +978,9 @@ colorize if writing to a terminal.''')
         xmlgzpath = args.jmdict
 
     # check for already running process & leftovers
-    updating_files = glob(config['paths']['database'] + '.new.*')
+    updating_files = glob(config.get('paths','database') + '.new.*')
     for uf in updating_files:
-        m = re.match(config['paths']['database'] + '.new.([0-9]*)', uf)
+        m = re.match(config.get('paths','database') + '.new.([0-9]*)', uf)
         pid = int(m.group(1))
         try:
             os.getpgid(pid)
@@ -1032,6 +1032,6 @@ and then you can run updatedb-myougiden without -f.'''
         print("Deleting temporary file.")
         os.remove(xmlgzpath)
 
-    os.rename(tmpdb, config['paths']['database'])
+    os.rename(tmpdb, config.get('paths','database'))
     atexit.unregister(cleanup)
     print("myougiden is ready to use, enjoy!")

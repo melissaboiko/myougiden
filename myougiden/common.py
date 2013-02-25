@@ -85,13 +85,13 @@ External programs:
   nice: %s
   ionice: %s
 '''.strip() % (
-    fmt(config['core']['version'], 'parameter'),
+    fmt(config.get('core','version'), 'parameter'),
     fmt(dbversion, 'parameter'),
     fmt(jmdict_mtime, 'parameter'),
     fmt(platform.python_version(), 'parameter'),
     fmt(platform.platform(), 'parameter'),
 
-    fmt(config['paths']['prefix'], 'parameter'),
+    fmt(config.get('paths','prefix'), 'parameter'),
 
     fmt(romkan.__version__, 'parameter'),
     # fmt(termcolor.__version__, 'parameter'),
