@@ -136,7 +136,7 @@ def color_pager():
         opts = os.getenv('LESS')
         if not opts:
             os.environ['LESS'] = 'FRX'
-        elif (re.search('[rR]', os.environ('LESS'))
+        elif (re.search('[rR]', os.environ['LESS'])
               or re.search('-[rR]', pager)):
             return pager
         else:
