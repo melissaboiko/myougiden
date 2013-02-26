@@ -417,12 +417,14 @@ class Sense():
             return [gloss for gloss in self.glosses]
 
 
-def fetch_entry(cur, ent_seq):
-    '''Return Entry object..'''
+def fetch_entry(con, ent_seq):
+    '''Return Entry object.'''
 
     kanjis = []
     readings = []
     senses = []
+
+    cur = con.cursor()
 
     cur.execute('''SELECT
                 kanji_id,
@@ -431,13 +433,17 @@ def fetch_entry(cur, ent_seq):
                 frequent
                 FROM kanjis
                 WHERE ent_seq = ?;''', [ent_seq])
-    for row in cur.fetchall():
-        kanjis.append(Kanji(
-            kanji_id=row[0],
-            text=row[1],
-            ke_inf=row[2],
-            frequent=row[3],
-        ))
+
+    k_rows = cur.fetchmany()
+    while k_rows:
+        for k_row in k_rows:
+            kanjis.append(Kanji(
+                kanji_id=k_row[0],
+                text=k_row[1],
+                ke_inf=k_row[2],
+                frequent=k_row[3],
+            ))
+        k_rows = cur.fetchmany()
 
     cur.execute('''SELECT
                 reading_id,
@@ -448,23 +454,31 @@ def fetch_entry(cur, ent_seq):
                 FROM readings
                 WHERE ent_seq = ?;''', [ent_seq])
 
-    for row in cur.fetchall():
-        reading = Reading(
-            reading_id=row[0],
-            text=row[1],
-            re_nokanji=row[2],
-            frequent=row[3],
-            re_inf=row[4],
-        )
+    re_rows = cur.fetchmany()
+    while re_rows:
+        for re_row in re_rows:
+            reading = Reading(
+                reading_id=re_row[0],
+                text=re_row[1],
+                re_nokanji=re_row[2],
+                frequent=re_row[3],
+                re_inf=re_row[4],
+            )
 
-        cur.execute('''SELECT re_restr
-                    FROM reading_restrictions
-                    WHERE reading_id = ?;''',
-                    [reading.reading_id])
-        for row in cur.fetchall():
-            reading.re_restr.append(row[0])
+            cur2 = con.cursor()
+            cur2.execute('''SELECT re_restr
+                         FROM reading_restrictions
+                         WHERE reading_id = ?;''',
+                         [reading.reading_id])
+            restr_rows = cur2.fetchmany()
+            while restr_rows:
+                for restr_row in restr_rows:
+                    reading.re_restr.append(restr_row[0])
+                restr_rows = cur2.fetchmany()
 
-        readings.append(reading)
+            readings.append(reading)
+
+        re_rows = cur.fetchmany()
 
 
     senses = []
@@ -481,37 +495,54 @@ def fetch_entry(cur, ent_seq):
         [ent_seq]
     )
 
-    for row in cur.fetchall():
-        sense = Sense(sense_id=row[0],
-                      pos=row[1],
-                      field=row[2],
-                      misc=row[3],
-                      dial=row[4],
-                      s_inf=row[5])
+    s_rows = cur.fetchmany()
+    while s_rows:
+        for s_row in s_rows:
+            cur2 = con.cursor()
+            sense = Sense(sense_id=s_row[0],
+                          pos=s_row[1],
+                          field=s_row[2],
+                          misc=s_row[3],
+                          dial=s_row[4],
+                          s_inf=s_row[5])
 
-        cur.execute('''
-                    SELECT stagk
-                    FROM sense_kanji_restrictions
-                    WHERE sense_id = ?;
-                    ''', [sense.sense_id]
-                   )
-        for row in cur.fetchall():
-            sense.stagk.append(row[0])
+            cur2.execute('''
+                        SELECT stagk
+                        FROM sense_kanji_restrictions
+                        WHERE sense_id = ?;
+                        ''', [sense.sense_id]
+                       )
+            stagk_rows = cur2.fetchmany()
+            while stagk_rows:
+                for stagk_row in stagk_rows:
+                    sense.stagk.append(stagk_row[0])
+                stagk_rows = cur2.fetchmany()
 
-        cur.execute('''
-                    SELECT stagr
-                    FROM sense_reading_restrictions
-                    WHERE sense_id = ?;
-                    ''', [sense.sense_id]
-                   )
-        for row in cur.fetchall():
-            sense.stagr.append(row[0])
+            cur2.execute('''
+                        SELECT stagr
+                        FROM sense_reading_restrictions
+                        WHERE sense_id = ?;
+                        ''', [sense.sense_id]
+                       )
+            stagr_rows = cur2.fetchmany()
+            while stagr_rows:
+                for stagr_row in stagr_rows:
+                    sense.stagr.append(stagr_row[0])
+                stagr_rows = cur2.fetchmany()
 
-        cur.execute('SELECT gloss FROM glosses WHERE sense_id = ?;', [sense.sense_id])
-        for row in cur.fetchall():
-            sense.glosses.append(row[0])
+            cur2.execute('''SELECT gloss
+                        FROM glosses
+                        WHERE sense_id = ?;''', [sense.sense_id])
+            gloss_rows = cur2.fetchmany()
+            while gloss_rows:
+                for gloss_row in gloss_rows:
+                    sense.glosses.append(gloss_row[0])
+                gloss_rows = cur2.fetchmany()
 
-        senses.append(sense)
+            senses.append(sense)
+
+        s_rows = cur.fetchmany()
+
 
     cur.execute('SELECT frequent FROM entries WHERE ent_seq = ?;', [ent_seq])
     frequent=cur.fetchone()[0]
