@@ -5,9 +5,9 @@ currently functional, if a bit rough in the edges.
 Features:
  - Fully Unicode-aware.
  - Regular expression support.
- - Partial, full, and whole-word queries.
- - Optional rōmaji input and output.
+ - Partial, full, whole-word, and start-of-field queries.
  - Intelligently find out what kind of query is intended.
+ - Optional rōmaji input and output.
  - Option for tab-separated output, easily manipulable with Unix tools. (beta)
  - Full color output, including partial match highlighting.  No seriously, this
    thing has a *lot* of color.  I mean we're talking Takashi Murakami material

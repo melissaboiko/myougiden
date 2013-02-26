@@ -7,8 +7,6 @@
        - wrapper over binary?
 
    - wouldn't it make sense for automatic partial matches to try matching the
-     beginning first?
-     - add a "beginning" search = like 'query%'
 
    - whole-word for Japanese (feasible?)
    - support rōmaji regexpes

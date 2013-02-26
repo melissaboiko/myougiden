@@ -5,6 +5,7 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
     '''Main search function.  Return list of ent_seqs.
 
     Field in ('kanji', 'reading', 'gloss').
+    Extent in ('whole', 'beginning', 'word', 'partial').
     '''
 
     if regexp:
@@ -12,6 +13,8 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
 
         if extent == 'whole':
             query = '^' + query + '$'
+        elif extent == 'beginning':
+            query = '^' + query
         elif extent == 'word':
             query = r'\b' + query + r'\b'
 
@@ -37,7 +40,9 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
             query = query.replace('%', r'\%')
             query = query.replace('_', r'\_')
 
-            if extent == 'partial':
+            if extent == 'beginning':
+                query = query + '%'
+            elif extent == 'partial':
                 query = '%' + query + '%'
 
     if field == 'kanji':
@@ -110,6 +115,8 @@ def matched_regexp(search_params):
 
     if search_params['extent'] == 'whole':
         reg = '^' + reg + '$'
+    elif search_params['extent'] == 'beginning':
+        reg = '^' + reg
     elif search_params['extent'] == 'word':
         reg = r'\b' + reg + r'\b'
 

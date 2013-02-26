@@ -44,19 +44,23 @@ respected.  Regexps currently don't work for rōmaji;
 use kana for readings.''')
 
 ag.add_argument('-e', '--extent', default='auto',
-                choices=('whole', 'word', 'partial', 'auto'),
+                choices=('whole', 'beginning', 'word', 'partial', 'auto'),
                 help='''How much of the field should the query match:
  - whole: Query must match the entire field.
+ - beginning: Query must match the beginning of the field.
  - word: Query must match whole word (at present
    only works for English; treated as 'whole' for
    kanji or reading fields.)
  - partial: Query may match anywhere, even partially
    inside words.
- - auto (default): Try all three, and return the
+ - auto (default): Try all four, and return the
    first to match something.''')
 
 ag.add_argument('-w', '--whole', action='store_const', const='whole', dest='extent',
                 help='''Equivalent to --extent=whole.''')
+
+ag.add_argument('-b', '--beginning', action='store_const', const='beginning', dest='extent',
+                help='''Equivalent to --extent=beginning.''')
 
 ag.add_argument('--word', action='store_const', const='word', dest='extent',
                 help='''Equivalent to --extent=word.''')
