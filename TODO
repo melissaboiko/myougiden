@@ -33,6 +33,7 @@
  - output:
    - better wrapping for "human" output
    - colored --help! (argparse extension?)
+   - make match coloring work for rōmaji output
 
  - better documentation
    - tsv output
