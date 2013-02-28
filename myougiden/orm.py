@@ -57,7 +57,7 @@ class Entry():
             if r.re_restr:
                 if not ts: ts = [k.text for k in self.kanjis]
                 for restr in r.re_restr:
-                    if restr not in ts:
+                    if restr not in ts and r in self.readings:
                         self.readings.remove(r)
 
     def process_restrictions(self, search_params):
