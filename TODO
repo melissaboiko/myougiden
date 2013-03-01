@@ -1,16 +1,19 @@
  - make it faster!
 
+ - compatibility:
+   - install everything (config.ini, jmdict.sqlite) to package_datadir, to stop
+     it from breaking when different paths are provided to setup.py install 
+
  - query types:
    - inflection!
      - and guess
      - if only there was Mecab for Python 3...
        - wrapper over binary?
 
-   - wouldn't it make sense for automatic partial matches to try matching the
-
    - whole-word for Japanese (feasible?)
+
    - support rōmaji regexpes
-     - or at least warn
+     - or at least warn about lack of support
 
    - perhaps it would be nice to make composite filters like search engines:
      - tea ceremony → matches any entry with both words "tea", "ceremoy"
@@ -24,19 +27,20 @@
    - more fine-grained --frequent (support ke_pri, re_pri)
    - support all JMdict languages
 
- - go beyond JMdict
-   - pitch-accent data (from where?)
-   - names (JMnedict)?
-   - famous people/place names from wikipedia etc?
-   - order by frequency?
+   - go beyond JMdict:
+     - pitch-accent data (from where?)
+     - names (JMnedict)?
+     - famous people/place names from wikipedia etc?
+     - order by frequency?
 
  - output:
+   - make match coloring work for rōmaji output
    - better wrapping for "human" output
    - colored --help! (argparse extension?)
-   - make match coloring work for rōmaji output
+   - think hard about tsv output
 
  - better documentation
-   - tsv output
+   - document tsv output
    - manpage?
    - about time to start a changelog...
 
