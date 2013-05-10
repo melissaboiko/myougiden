@@ -1,5 +1,7 @@
  - make it faster!
 
+ - interactive shell mode
+
  - compatibility:
    - install everything (config.ini, jmdict.sqlite) to package_datadir, to stop
      it from breaking when different paths are provided to setup.py install 
