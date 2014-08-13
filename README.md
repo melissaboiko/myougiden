@@ -1,19 +1,20 @@
 myougiden is a command-line, Japanese/English English/Japanese dictionary.
 It's based on EDICT (JMdict), the venerable collaborative project.  It's
-currently functional, if a bit rough in the edges.
+currently functional, if a bit (a lot) rough in the edges.
 
 Features:
  - Fully Unicode-aware.
  - Regular expression support.
  - Partial, full, whole-word, and start-of-field queries.
- - Intelligently find out what kind of query is intended.
+ - Intelligently figure out what kind of query is intended.
  - Optional rōmaji input and output.
  - Option for tab-separated output, easily manipulable with Unix tools. (beta)
  - Full color output, including partial match highlighting.  No seriously, this
    thing has a *lot* of color.  I mean we're talking Takashi Murakami material
-   here.
+   right here.
  - Handles JMdict restricted readings and senses intelligently.
- - Auto-pager, auto-color, auto-nice, and other small niceties.
+ - Auto-pager, auto-color, auto-nice, auto-greppable output, and other small
+   niceties.
 
 myougiden saves EDICT data in sqlite3 format. This costs some
 disk space (currently about 53MiB), but with indexes, it seems to
@@ -25,7 +26,7 @@ Sample usage
 Some example queries:
 
     $ myougiden -h             # long help
-    $ myougiden tea ceremony   # guess what to query
+    $ myougiden tea ceremony   # guess what kind of query to run
     $ myougiden 茶             # ibid
     $ myougiden -p 茶          # include partial matches
     $ myougiden -p -f 茶       # ...but limit to frequent words
@@ -33,7 +34,7 @@ Some example queries:
     $ myougiden -x '茶.'       # regexp search
     $ myougiden sakura         # if no match is found, treat as rōmaji
     $ myougiden -r kanji       # forces rōmaji
-    $ myougiden -a uK          # reference for EDICT-style abbreviations
+    $ myougiden -a uK          # consult documentation for EDICT-style abbreviations
 
 Screenshots
 ===========
@@ -72,8 +73,8 @@ Just upgrade the pip package:
 
     $ sudo pip install --upgrade myougiden
 
-Installing in Debian stable
----------------------------
+Installing in Debian squeeze
+----------------------------
 
 As of this writing, Debian squeeze has no python3-pip.  You can
 install it manually like this:
