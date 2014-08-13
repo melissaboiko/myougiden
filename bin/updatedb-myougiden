@@ -89,6 +89,7 @@ short_expansions = {
   'law': 'law',
   'ling': 'linguistics',
   'm-sl': 'manga slang',
+  'mahj': 'mahjong term',
   'male': 'men’s speech',
   'male-sl': 'male slang',
   'math': 'math',
@@ -120,6 +121,7 @@ short_expansions = {
   'rare': 'rare',
   'rkb': 'Ryūkyū-ben',
   'sens': 'sensitive',
+  'shogi': 'shogi term',
   'sl': 'slang',
   'sports': 'sports',
   'suf': 'suffix',
@@ -129,6 +131,7 @@ short_expansions = {
   'tsug': 'Tsugaru-ben',
   'uK': 'usually in kanji',
   'uk': 'usually in kana',
+  'unc': 'unclassified',
   'v-unspec': 'verb unspecified',
   'v1': 'ichidan verb',
   'v2a-s': "-u nidan verb",
@@ -188,6 +191,7 @@ short_expansions = {
   'vt': 'trans. verb',
   'vulg': 'vulgar',
   'vz': '-zuru ichidan verb',
+  'yoji': '4-character compound',
   'zool': 'zoology',
 }
 
