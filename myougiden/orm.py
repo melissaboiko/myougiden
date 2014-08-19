@@ -342,7 +342,7 @@ class Sense():
     def __init__(self,
                  sense_id=None,
 
-                 # glosses, a list of strings
+                 # glosses, a list of ('string': 'lang') tuples
                  glosses=None,
 
                  # restrictions, as lists of strings

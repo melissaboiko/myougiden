@@ -409,6 +409,7 @@ def create_tables(cur, jmdictxml):
         sense_id INTEGER NOT NULL,
         gloss_id INTEGER PRIMARY KEY AUTOINCREMENT,
         gloss TEXT NOT NULL,
+        lang TEXT DEFAULT 'eng',
         FOREIGN KEY (sense_id) REFERENCES senses(sense_id)
       );
     ''')
@@ -603,10 +604,12 @@ def insert_entries(cur, entries):
                     VALUES (?, ?);''',
                     tuples)
 
-    tuples = [(s.sense_id, g) for s in senses for g in s.glosses]
+    tuples = [(s.sense_id, gloss_tuple[0], gloss_tuple[1])
+              for s in senses
+                for gloss_tuple in s.glosses]
     cur.executemany('''INSERT INTO glosses
-                    (sense_id, gloss)
-                    VALUES (?, ?)''',
+                    (sense_id, gloss, lang)
+                    VALUES (?, ?, ?)''',
                     tuples)
 
 
@@ -664,9 +667,13 @@ def make_database(jmdict, sqlite, check, progress=True):
         ''', [name, short_expansions[name], value])
 
 
-
     def handle_start_el(el, attrs):
         nonlocal b
+        with open('/tmp/foo', 'a') as f:
+            f.write(el)
+            f.write("\n")
+            f.write(str(attrs))
+            f.write("\n\n")
 
         b.cdata = ''
 
@@ -678,6 +685,11 @@ def make_database(jmdict, sqlite, check, progress=True):
             b.reading = Reading()
         elif el == 'sense':
             b.sense = Sense()
+        elif el == 'gloss':
+            if 'xml:lang' in attrs.keys():
+                b.xmllang = attrs['xml:lang']
+            else:
+                b.xmllang = 'eng'
 
     def handle_cdata(data):
         nonlocal b
@@ -757,7 +769,8 @@ def make_database(jmdict, sqlite, check, progress=True):
                 b.sense.s_inf = b.cdata
 
         elif el == 'gloss':
-            b.sense.glosses.append(b.cdata)
+            lang = b.xmllang
+            b.sense.glosses.append((b.cdata, lang))
 
         elif el == 'k_ele':
             b.entry.kanjis.append(b.kanji)
@@ -886,7 +899,7 @@ Starting... ''' % (fmt('Downloading', 'info'),
 
 
 def fetch_jmdict_xml(localgz):
-    '''Update (via rsync) or download JMdict_e.gz.
+    '''Update (via rsync) or download JMdict.gz.
 
     localgz is the local filename.  If it doesn't end in .gz, we assume
     it's a temp file and don't try to update it, just download.
@@ -941,17 +954,17 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 
     ap.add_argument('-f', '--fetch', action='store_true',
-                    help=('''Try to fetch JMdict_e.gz from
+                    help=('''Try to fetch JMdict.gz from
 %s .''' % jmdictgz_http))
 
     ap.add_argument('-k', '--delete', action='store_true',
-                    help='''Delete downloaded JMdict_e.gz file after fetching.
+                    help='''Delete downloaded JMdict.gz file after fetching.
 If not set, it will be kept to speed up future updates.''')
 
     ap.add_argument('-j', '--jmdict',
                     default=jmdictgz,
                     metavar='PATH',
-                    help='''Path of local JMdict_e.gz file. Default:
+                    help='''Path of local JMdict.gz file. Default:
 %(default)s .''')
 
     ap.add_argument('-c', '--color', choices=('yes', 'no', 'auto'), default='auto',
@@ -1023,7 +1036,7 @@ colorize if writing to a terminal.''')
             fetch_jmdict_xml(xmlgzpath)
         except Exception as e:
             print('''
-%s: Could not download JMdict_e.gz as requested:
+%s: Could not download JMdict.gz as requested:
     %s.
 Try again when the Internet's back up!  Or get it yourself and save to
     %s
