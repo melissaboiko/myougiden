@@ -1,7 +1,7 @@
 import re
 from myougiden import texttools as tt
 
-def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=False, frequent=False):
+def search_by(cur, field, query, lang='eng', extent='whole', regexp=False, case_sensitive=False, frequent=False):
     '''Main search function.  Return list of ent_seqs.
 
     Field in ('kanji', 'reading', 'gloss').
@@ -56,12 +56,13 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
         join = '''JOIN senses ON senses.ent_seq = entries.ent_seq
                   JOIN glosses ON glosses.sense_id = senses.sense_id'''
 
-    where_extra = ''
+    if field == 'gloss':
+        where_extra = "AND glosses.lang = '%s'" % lang
+    else:
+        where_extra = ''
     if frequent:
         where_extra += 'AND entries.frequent = 1'
 
-#    print(('''SELECT DISTINCT entries.ent_seq FROM entries %s WHERE %s.%s %s %s ;'''
-#           % (join, table, field, operator, where_extra)).replace('?', "'%s'" % query))
 
     cur.execute('''
 SELECT DISTINCT entries.ent_seq
