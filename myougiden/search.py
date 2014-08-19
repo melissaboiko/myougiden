@@ -128,4 +128,3 @@ def matched_regexp(search_params):
 
     return reg
 
-

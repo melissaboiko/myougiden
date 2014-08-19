@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import locale
 import sys
 import re
 import romkan
@@ -11,6 +12,7 @@ from myougiden import orm
 from myougiden import common
 from myougiden import texttools as tt
 from myougiden import search
+from myougiden.common import GLOSS_LANGS
 from myougiden.color import fmt
 
 ap = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
@@ -31,8 +33,9 @@ ag.add_argument('-g', '--gloss', '--meaning', action='store_const', dest='field'
                 help='''Return entries matching query on glosses (translations/meaning).''')
 
 ag.add_argument('-l', '--lang', action='store', dest='lang', default=None,
-                help='''Which language to find the gloss in
-(default: guess from locale; fallback to English)''')
+                help='''Which language to find the gloss in.
+Available languages: %s
+Default: guess from locale; fallback to English.''' % ', '.join(sorted(GLOSS_LANGS.keys())))
 
 ag = ap.add_argument_group('Query options')
 ag.add_argument('--case-sensitive', '--sensitive', action='store_true',
@@ -212,7 +215,13 @@ if args.extent == 'word' and args.field in ('kanji', 'reading'):
 
 
 if args.lang == None:
-    args.lang = 'eng'
+    args.lang = 'eng' # default
+
+    loc = locale.getlocale()
+    if loc and loc[0]:
+        locale_lang = loc[0][0:2]
+        if locale_lang in GLOSS_LANGS.keys():
+            args.lang = GLOSS_LANGS[locale_lang]
 
 # first, we need a dictionary of options for search_by()
 search_args = vars(args).copy() # turn Namespace to dict

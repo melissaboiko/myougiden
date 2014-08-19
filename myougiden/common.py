@@ -174,3 +174,13 @@ def get_terminal_size():
         cr = (env.get('LINES', 25), env.get('COLUMNS', 80))
 
     return int(cr[1]), int(cr[0])
+
+# ISO 632-1 : ISO 632-2
+# the first is used by JMdict, the second by system locale
+GLOSS_LANGS = {
+    'en':'eng',
+    'de':'ger',
+    'ru':'rus',
+    'nl':'dut',
+    'fr':'fre',
+}
