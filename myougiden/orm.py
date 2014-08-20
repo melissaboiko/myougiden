@@ -120,8 +120,8 @@ class Entry():
             changed=False
             matched = []
             for s in self.senses:
-                for g in s.glosses:
-                    if matchreg.search(g):
+                for gloss in s.glosses_in(search_params['lang']):
+                    if matchreg.search(gloss):
                         matched.append(s)
                         break
 
@@ -183,7 +183,7 @@ class Entry():
         for sense in self.senses:
             for idx, gloss in enumerate(sense.glosses):
                 # I am unreasonably proud of this solution.
-                sense.glosses[idx] = sense.glosses[idx].replace(gsep, '¦')
+                sense.glosses[idx][0] = sense.glosses[idx][0].replace(gsep, '¦')
 
 
         s = ''
@@ -197,7 +197,7 @@ class Entry():
             tagstr = sense.tagstr(search_params)
             if tagstr: tagstr += ' '
 
-            s += "\t%s%s" % (tagstr, gsep.join(sense.glosses))
+            s += "\t%s%s" % (tagstr, gsep.join(sense.glosses_in(search_params['lang'])))
 
         if self.is_frequent():
             s += ' ' + fmt('(P)', 'highlight')
@@ -336,7 +336,7 @@ class Sense():
 
     Attributes:
     - sense_id: database ID.
-    - glosses: a list of glosses (as strings).
+    - glosses: a list of (gloss, lang) tuples.
     '''
 
     def __init__(self,
@@ -375,6 +375,13 @@ class Sense():
 
         self.s_inf = s_inf
 
+    def glosses_in(self, lang):
+        '''Return glosses matching given lang, as a list of strings.'''
+
+        return [gloss[0]
+                for gloss in self.glosses
+                if gloss[1] == lang]
+
 
     def tagstr(self, search_conditions):
         '''Return a string with all information tags.
@@ -405,16 +412,15 @@ class Sense():
         else:
             return ''
 
-    def fmt_glosses(self, search_params=None):
+    def fmt_glosses(self, search_params):
         '''Return list of formatted strings, one per gloss.'''
 
-        if search_params and search_params['field'] == 'gloss':
+        if search_params['field'] == 'gloss':
             matchreg = search.matched_regexp(search_params)
-            return [color.color_regexp(matchreg,
-                                       gloss)
-                   for gloss in self.glosses]
+            return [color.color_regexp(matchreg, gloss)
+                   for gloss in self.glosses_in(search_params['lang'])]
         else:
-            return [gloss for gloss in self.glosses]
+                   return self.glosses_in(search_params['lang'])
 
 
 def fetch_entry(cur, ent_seq):
@@ -507,9 +513,9 @@ def fetch_entry(cur, ent_seq):
         for row in cur.fetchall():
             sense.stagr.append(row[0])
 
-        cur.execute('SELECT gloss FROM glosses WHERE sense_id = ?;', [sense.sense_id])
+        cur.execute('SELECT gloss, lang FROM glosses WHERE sense_id = ?;', [sense.sense_id])
         for row in cur.fetchall():
-            sense.glosses.append(row[0])
+            sense.glosses.append((row[0], row[1]))
 
         senses.append(sense)
 
