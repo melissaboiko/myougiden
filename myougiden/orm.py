@@ -120,7 +120,7 @@ class Entry():
             changed=False
             matched = []
             for s in self.senses:
-                for gloss in s.glosses_in(search_params['lang']):
+                for gloss in s.glosses_try_lang(search_params['lang']):
                     if matchreg.search(gloss):
                         matched.append(s)
                         break
@@ -197,7 +197,7 @@ class Entry():
             tagstr = sense.tagstr(search_params)
             if tagstr: tagstr += ' '
 
-            s += "\t%s%s" % (tagstr, gsep.join(sense.glosses_in(search_params['lang'])))
+            s += "\t%s%s" % (tagstr, gsep.join(sense.glosses_try_lang(search_params['lang'])))
 
         if self.is_frequent():
             s += ' ' + fmt('(P)', 'highlight')
@@ -382,6 +382,15 @@ class Sense():
                 for gloss in self.glosses
                 if gloss[1] == lang]
 
+    def glosses_try_lang(self, lang):
+        '''Return glosses in given lang, if there are any; else, in English.'''
+
+        translated = self.glosses_in(lang)
+        if translated == []:
+            return self.glosses_in('eng')
+        else:
+            return translated
+
 
     def tagstr(self, search_conditions):
         '''Return a string with all information tags.
@@ -413,14 +422,14 @@ class Sense():
             return ''
 
     def fmt_glosses(self, search_params):
-        '''Return list of formatted strings, one per gloss.'''
+        '''Return list of colored strings, one per gloss.'''
 
         if search_params['field'] == 'gloss':
             matchreg = search.matched_regexp(search_params)
             return [color.color_regexp(matchreg, gloss)
-                   for gloss in self.glosses_in(search_params['lang'])]
+                   for gloss in self.glosses_try_lang(search_params['lang'])]
         else:
-                   return self.glosses_in(search_params['lang'])
+                   return self.glosses_try_lang(search_params['lang'])
 
 
 def fetch_entry(cur, ent_seq):
