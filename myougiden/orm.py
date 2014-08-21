@@ -183,7 +183,7 @@ class Entry():
         for sense in self.senses:
             for idx, gloss in enumerate(sense.glosses):
                 # I am unreasonably proud of this solution.
-                sense.glosses[idx][0] = sense.glosses[idx][0].replace(gsep, '¦')
+                sense.glosses[idx] = (gloss[0].replace(gsep, '¦'), gloss[1])
 
 
         s = ''
