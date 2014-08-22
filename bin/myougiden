@@ -222,6 +222,13 @@ if args.lang == None:
         locale_lang = loc[0][0:2]
         if locale_lang in GLOSS_LANGS.keys():
             args.lang = GLOSS_LANGS[locale_lang]
+else:
+    if args.lang not in GLOSS_LANGS.values():
+        if args.lang in GLOSS_LANGS.keys():
+            args.lang = GLOSS_LANGS[args.lang]
+        else:
+            print("Error: unknown language %s" % args.lang)
+            sys.exit(2)
 
 # first, we need a dictionary of options for search_by()
 search_args = vars(args).copy() # turn Namespace to dict
