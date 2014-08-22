@@ -53,8 +53,7 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
         join = 'JOIN readings ON entries.ent_seq = readings.ent_seq'
     elif field == 'gloss':
         table = 'glosses'
-        join = '''JOIN senses ON senses.ent_seq = entries.ent_seq
-                  JOIN glosses ON glosses.sense_id = senses.sense_id'''
+        join = '''JOIN glosses ON entries.ent_seq = glosses.ent_seq'''
 
     where_extra = ''
     if frequent:
