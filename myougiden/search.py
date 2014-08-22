@@ -46,30 +46,30 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
                 query = '%' + query + '%'
 
     if field == 'kanji':
-        table = 'kanjis'
-        join = 'JOIN kanjis ON entries.ent_seq = kanjis.ent_seq'
+        table = 'kanjis_fts'
     elif field == 'reading':
-        table = 'readings'
-        join = 'JOIN readings ON entries.ent_seq = readings.ent_seq'
+        table = 'readings_fts'
     elif field == 'gloss':
-        table = 'glosses'
-        join = '''JOIN glosses ON entries.ent_seq = glosses.ent_seq'''
+        table = 'glosses_fts'
 
     where_extra = ''
     if frequent:
         where_extra += 'AND entries.frequent = 1'
 
-#    print(('''SELECT DISTINCT entries.ent_seq FROM entries %s WHERE %s.%s %s %s ;'''
-#           % (join, table, field, operator, where_extra)).replace('?', "'%s'" % query))
+#     print('''
+# SELECT DISTINCT ent_seq
+# FROM %s
+# WHERE %s %s %s
+# ;'''
+#                 % (table, field, operator, where_extra),
+#                 [query])
 
     cur.execute('''
-SELECT DISTINCT entries.ent_seq
-FROM entries
-  %s
-WHERE %s.%s %s
-%s
+SELECT DISTINCT ent_seq
+FROM %s
+WHERE %s %s %s
 ;'''
-                % (join, table, field, operator, where_extra),
+                % (table, field, operator, where_extra),
                 [query])
 
     res = []

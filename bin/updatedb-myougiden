@@ -417,6 +417,34 @@ def create_tables(cur, jmdictxml):
 
 def create_indexes(cur):
 
+    cur.execute('''CREATE VIRTUAL TABLE kanjis_fts USING fts4(ent_seq, kanji);''')
+    cur.execute('''
+      INSERT INTO kanjis_fts
+        SELECT entries.ent_seq, kanjis.kanji
+        FROM entries JOIN kanjis ON entries.ent_seq = kanjis.ent_seq
+      ;
+    ''')
+    cur.execute('''INSERT INTO kanjis_fts(kanjis_fts) VALUES ('optimize');''')
+
+    cur.execute('''CREATE VIRTUAL TABLE readings_fts USING fts4(ent_seq, reading);''')
+    cur.execute('''
+      INSERT INTO readings_fts
+        SELECT entries.ent_seq, readings.reading
+        FROM entries JOIN readings ON entries.ent_seq = readings.ent_seq
+      ;
+    ''')
+    cur.execute('''INSERT INTO readings_fts(readings_fts) VALUES ('optimize');''')
+
+    cur.execute('''CREATE VIRTUAL TABLE glosses_fts USING fts4(ent_seq, sense_id, gloss);''')
+    cur.execute('''
+      INSERT INTO glosses_fts
+        SELECT entries.ent_seq, senses.sense_id, glosses.gloss
+        FROM entries JOIN senses ON entries.ent_seq = senses.ent_seq
+          JOIN glosses ON senses.sense_id = glosses.sense_id
+      ;
+    ''')
+    cur.execute('''INSERT INTO glosses_fts(glosses_fts) VALUES ('optimize');''')
+
     cur.execute('''
       CREATE INDEX kanjis_ent_seq ON kanjis (ent_seq);
     ''')
