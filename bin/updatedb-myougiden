@@ -406,10 +406,12 @@ def create_tables(cur, jmdictxml):
     cur.execute('''
       CREATE TABLE
       glosses (
+        ent_seq INTEGER NOT NULL,
         sense_id INTEGER NOT NULL,
         gloss_id INTEGER PRIMARY KEY AUTOINCREMENT,
         gloss TEXT NOT NULL,
         lang TEXT DEFAULT 'eng',
+        FOREIGN KEY (ent_seq) REFERENCES entries(ent_seq),
         FOREIGN KEY (sense_id) REFERENCES senses(sense_id)
       );
     ''')
@@ -424,6 +426,9 @@ def create_indexes(cur):
     ''')
     cur.execute('''
       CREATE INDEX senses_ent_seq ON senses (ent_seq);
+    ''')
+    cur.execute('''
+      CREATE INDEX glosses_ent_seq ON glosses (sense_id);
     ''')
     cur.execute('''
       CREATE INDEX glosses_sense_id ON glosses (sense_id);
@@ -604,12 +609,13 @@ def insert_entries(cur, entries):
                     VALUES (?, ?);''',
                     tuples)
 
-    tuples = [(s.sense_id, gloss_tuple[0], gloss_tuple[1])
-              for s in senses
-                for gloss_tuple in s.glosses]
+    tuples = [(e.ent_seq, s.sense_id, gloss_tuple[0], gloss_tuple[1])
+              for e in entries
+                for s in e.senses
+                  for gloss_tuple in s.glosses]
     cur.executemany('''INSERT INTO glosses
-                    (sense_id, gloss, lang)
-                    VALUES (?, ?, ?)''',
+                    (ent_seq, sense_id, gloss, lang)
+                    VALUES (?, ?, ?, ?)''',
                     tuples)
 
 
