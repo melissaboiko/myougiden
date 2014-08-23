@@ -17,17 +17,17 @@ def regexp_insensitive(pattern, field):
     reg = get_regexp(pattern, re.I)
     return reg.search(field) is not None
 
-def match_word_sensitive(word, field):
-    '''SQL hook function for whole-word, case-sensitive, non-regexp matching.'''
-
-    reg = get_regexp(r'\b' + re.escape(word) + r'\b', 0)
-    return reg.search(field) is not None
-
-def match_word_insensitive(word, field):
-    '''SQL hook function for whole-word, case-sensitive, non-regexp matching.'''
-
-    reg = get_regexp(r'\b' + re.escape(word) + r'\b', re.I)
-    return reg.search(field) is not None
+#def match_word_sensitive(word, field):
+#    '''SQL hook function for whole-word, case-sensitive, non-regexp matching.'''
+#
+#    reg = get_regexp(r'\b' + re.escape(word) + r'\b', 0)
+#    return reg.search(field) is not None
+#
+#def match_word_insensitive(word, field):
+#    '''SQL hook function for whole-word, case-sensitive, non-regexp matching.'''
+#
+#    reg = get_regexp(r'\b' + re.escape(word) + r'\b', re.I)
+#    return reg.search(field) is not None
 
 class DatabaseAccessError(Exception):
     '''Generic error accessing database.'''
@@ -97,11 +97,11 @@ def opendb(case_sensitive=False):
 
     if case_sensitive:
         con.create_function('regexp', 2, regexp_sensitive)
-        con.create_function('match', 2, match_word_sensitive)
+        # con.create_function('match', 2, match_word_sensitive)
         cur.execute('PRAGMA case_sensitive_like = 1;')
     else:
         con.create_function('regexp', 2, regexp_insensitive)
-        con.create_function('match', 2, match_word_insensitive)
+        # con.create_function('match', 2, match_word_insensitive)
         cur.execute('PRAGMA case_sensitive_like = 0;')
 
     return con, cur

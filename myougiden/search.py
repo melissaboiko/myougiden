@@ -8,7 +8,30 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
     Extent in ('whole', 'beginning', 'word', 'partial').
     '''
 
+    if (field == 'gloss' and case_sensitive) or extent in ('whole', 'partial'):
+        fts=False
+    else:
+        fts=True
+
+    if fts:
+        if field == 'kanji':
+            table = 'kanjis_fts'
+        elif field == 'reading':
+            table = 'readings_fts'
+        elif field == 'gloss':
+            table = 'glosses_fts'
+    else:
+        if field == 'kanji':
+            table = 'kanjis'
+        elif field == 'reading':
+            table = 'readings'
+        elif field == 'gloss':
+            table = 'glosses'
+
+    where_extra = ''
+
     if regexp:
+        # case sensitivity set for operator in opendb()
         operator = 'REGEXP ?'
 
         if extent == 'whole':
@@ -19,50 +42,44 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
             query = r'\b' + query + r'\b'
 
     else:
-        if extent == 'word':
-            # we custom-implemented match() to whole-word search.
-            #
-            # it uses regexps internally though (but the user query is
-            # escaped).
+        if fts:
             operator = 'MATCH ?'
+            if extent == 'beginning':
+                query = query + '*'
 
         else:
-            # LIKE gives us case-insensitiveness implemented in the
-            # database, so we usen it even for whole-field matching.
-            #
-            # "\" seems to be the least common character in EDICT.
-            operator = r"LIKE ? ESCAPE '\'"
 
-            # my editor doesn't like raw strings
-            # query = query.replace(r'\', r'\\')
-            query = query.replace('\\', '\\\\')
+            if extent == 'whole':
+                operator = '= ?'
+                query = query.replace('\\', '\\\\')
+                if case_sensitive and field == 'gloss':
+                    where_extra = 'COLLATE BINARY';
 
-            query = query.replace('%', r'\%')
-            query = query.replace('_', r'\_')
+            else:
+                # extent = 'partial
 
-            if extent == 'beginning':
-                query = query + '%'
-            elif extent == 'partial':
+                # "\" seems to be the least common character in EDICT.
+                operator = r"LIKE ? ESCAPE '\'"
+
+                # my editor doesn't like raw strings
+                # query = query.replace(r'\', r'\\')
+                query = query.replace('\\', '\\\\')
+
+                query = query.replace('%', r'\%')
+                query = query.replace('_', r'\_')
+
                 query = '%' + query + '%'
 
-    if field == 'kanji':
-        table = 'kanjis_fts'
-    elif field == 'reading':
-        table = 'readings_fts'
-    elif field == 'gloss':
-        table = 'glosses_fts'
-
-    where_extra = ''
     if frequent:
-        where_extra += 'AND entries.frequent = 1'
+        where_extra += ' AND entries.frequent = 1'
 
-#     print('''
-# SELECT DISTINCT ent_seq
-# FROM %s
-# WHERE %s %s %s
-# ;'''
-#                 % (table, field, operator, where_extra),
-#                 [query])
+    print('''
+SELECT DISTINCT ent_seq
+FROM %s
+WHERE %s %s %s
+;'''
+                % (table, field, operator, where_extra),
+                [query])
 
     cur.execute('''
 SELECT DISTINCT ent_seq

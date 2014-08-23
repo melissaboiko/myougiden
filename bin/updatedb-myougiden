@@ -409,42 +409,13 @@ def create_tables(cur, jmdictxml):
         ent_seq INTEGER NOT NULL,
         sense_id INTEGER NOT NULL,
         gloss_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        gloss TEXT NOT NULL,
+        gloss TEXT NOT NULL COLLATE NOCASE,
         FOREIGN KEY (ent_seq) REFERENCES entries(ent_seq)
         FOREIGN KEY (sense_id) REFERENCES senses(sense_id)
       );
     ''')
 
 def create_indexes(cur):
-
-    cur.execute('''CREATE VIRTUAL TABLE kanjis_fts USING fts4(ent_seq, kanji);''')
-    cur.execute('''
-      INSERT INTO kanjis_fts
-        SELECT entries.ent_seq, kanjis.kanji
-        FROM entries JOIN kanjis ON entries.ent_seq = kanjis.ent_seq
-      ;
-    ''')
-    cur.execute('''INSERT INTO kanjis_fts(kanjis_fts) VALUES ('optimize');''')
-
-    cur.execute('''CREATE VIRTUAL TABLE readings_fts USING fts4(ent_seq, reading);''')
-    cur.execute('''
-      INSERT INTO readings_fts
-        SELECT entries.ent_seq, readings.reading
-        FROM entries JOIN readings ON entries.ent_seq = readings.ent_seq
-      ;
-    ''')
-    cur.execute('''INSERT INTO readings_fts(readings_fts) VALUES ('optimize');''')
-
-    cur.execute('''CREATE VIRTUAL TABLE glosses_fts USING fts4(ent_seq, sense_id, gloss);''')
-    cur.execute('''
-      INSERT INTO glosses_fts
-        SELECT entries.ent_seq, senses.sense_id, glosses.gloss
-        FROM entries JOIN senses ON entries.ent_seq = senses.ent_seq
-          JOIN glosses ON senses.sense_id = glosses.sense_id
-      ;
-    ''')
-    cur.execute('''INSERT INTO glosses_fts(glosses_fts) VALUES ('optimize');''')
-
     cur.execute('''
       CREATE INDEX kanjis_ent_seq ON kanjis (ent_seq);
     ''')
@@ -470,7 +441,7 @@ def create_indexes(cur):
       CREATE INDEX readings_reading ON readings (reading);
     ''')
     cur.execute('''
-      CREATE INDEX glosses_gloss ON glosses (gloss);
+      CREATE INDEX glosses_gloss ON glosses (gloss COLLATE NOCASE);
     ''')
     cur.execute('''
       CREATE INDEX stagk_sense_id ON sense_kanji_restrictions(sense_id);
@@ -478,6 +449,40 @@ def create_indexes(cur):
     cur.execute('''
       CREATE INDEX stagr_sense_id ON sense_reading_restrictions(sense_id);
     ''')
+
+def create_fts_indexes(cur):
+    # unicode61 and icu currently not available on debian
+    # cur.execute('''CREATE VIRTUAL TABLE kanjis_fts USING fts4(ent_seq, kanji, tokenize=unicode61);''')
+    cur.execute('''CREATE VIRTUAL TABLE kanjis_fts USING fts4(ent_seq, kanji, matchinfo=fts3);''')
+    cur.execute('''
+      INSERT INTO kanjis_fts
+        SELECT entries.ent_seq, kanjis.kanji
+        FROM entries JOIN kanjis ON entries.ent_seq = kanjis.ent_seq
+      ;
+    ''')
+    cur.execute('''INSERT INTO kanjis_fts(kanjis_fts) VALUES ('optimize');''')
+
+    # cur.execute('''CREATE VIRTUAL TABLE readings_fts USING fts4(ent_seq, reading, tokenize=unicode61);''')
+    cur.execute('''CREATE VIRTUAL TABLE readings_fts USING fts4(ent_seq, reading, matchinfo=fts3);''')
+    cur.execute('''
+      INSERT INTO readings_fts
+        SELECT entries.ent_seq, readings.reading
+        FROM entries JOIN readings ON entries.ent_seq = readings.ent_seq
+      ;
+    ''')
+    cur.execute('''INSERT INTO readings_fts(readings_fts) VALUES ('optimize');''')
+
+    # cur.execute('''CREATE VIRTUAL TABLE glosses_fts USING fts4(ent_seq, sense_id, gloss, tokenize=unicode61);''')
+    cur.execute('''CREATE VIRTUAL TABLE glosses_fts USING fts4(ent_seq, sense_id, gloss, matchinfo=fts3);''')
+    cur.execute('''
+      INSERT INTO glosses_fts
+        SELECT entries.ent_seq, senses.sense_id, glosses.gloss
+        FROM entries JOIN senses ON entries.ent_seq = senses.ent_seq
+          JOIN glosses ON senses.sense_id = glosses.sense_id
+      ;
+    ''')
+    cur.execute('''INSERT INTO glosses_fts(glosses_fts) VALUES ('optimize');''')
+
 
 def count_entries(jmdict):
     count=0
@@ -847,8 +852,10 @@ def make_database(jmdict, sqlite, check, progress=True):
         update_coffee()
         signal.signal(signal.SIGALRM, signal.SIG_IGN)
 
-    print('%s...' % fmt('Creating indexes', 'info'))
+    print('%s...' % fmt('Creating regular indexes', 'info'))
     create_indexes(cur)
+    print('%s...' % fmt('Creating indexes for full text search', 'info'))
+    create_fts_indexes(cur)
 
     cur.close()
     con.commit()
