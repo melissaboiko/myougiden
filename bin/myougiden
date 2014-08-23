@@ -251,8 +251,8 @@ else:
 
 conditions = []
 for regexp in regexp_flags:
-    for extent in extents:
-        for field in fields:
+    for field in fields:
+        for extent in extents:
 
             # the useless combination; we'll avoid it to avoid wasting
             # time.
