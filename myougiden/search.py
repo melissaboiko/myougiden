@@ -71,7 +71,7 @@ def search_by(cur, field, query, extent='whole', regexp=False, case_sensitive=Fa
                 query = '%' + query + '%'
 
     if frequent:
-        where_extra += ' AND entries.frequent = 1'
+        where_extra += ' AND %s.frequent = 1' % table
 
     print('''
 SELECT DISTINCT ent_seq
