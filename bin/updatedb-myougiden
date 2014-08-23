@@ -303,11 +303,8 @@ def create_tables(cur, jmdictxml):
 
     # ent_seq is the id in JMdict.
     #
-    # we expand each JMdict entry into several entries; so we have
-    # our own ids.
-    #
-    # 'frequent' is true if at least one ke_pri or re_pri has a 'good' value.
-    # this is roughly equivalent to the '(P)' flag in EDICT.
+    # 'frequent' is true if at least one kanji or one reading is marked
+    # 'frequent'.
     cur.execute('''
       CREATE TABLE
       entries (
@@ -555,12 +552,6 @@ def update_coffee(signum=None, frame=None):
     print_coffee()
 
 def insert_entries(cur, entries):
-    # in order to generate tuples later, we need to decide on IDs beforehand.
-    cur.execute('''SELECT max(ent_seq) FROM entries;''')
-    last_id = cur.fetchone()[0] or 0
-    for i, e in enumerate(entries, 1):
-        e.ent_seq = last_id + i
-
     cur.executemany('''INSERT INTO entries
                     (ent_seq, frequent)
                     VALUES (?, ?);''',
