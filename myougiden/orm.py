@@ -22,43 +22,60 @@ class Entry():
         # TODO: more fine-grained
         return self.frequent
 
-    def remove_orphan_senses(self):
+    def remove_restricted_senses(self, readings, kanjis):
         '''Remove restricted senses that don't match any readings/kanjis.
 
         Helper function for process_restrictions().
         '''
 
         # buffer
-        ts = None
+        t = None
         for s in self.senses[:]:
             if s.stagr:
-                if not ts: ts = [r.text for r in self.readings]
-                for stagr in s.stagr:
-                    if stagr not in ts:
-                        self.senses.remove(s)
+                if not t: t = [r.text for r in readings]
+                found=False
+                for i in t:
+                    if i in s.stagr:
+                        found=True
+                        break
+                if not found:
+                    self.senses.remove(s)
 
-        ts = None
+        t = None
         for s in self.senses[:]:
             if s.stagk:
-                if not ts: ts = [k.text for k in self.kanjis]
-                for stagk in s.stagk:
-                    if stagk not in ts:
-                        self.senses.remove(s)
+                if not t: t = [k.text for k in kanjis]
+                found=False
+                for i in t:
+                    if i in s.stagk:
+                        found=True
+                        break
+                if not found:
+                    self.senses.remove(s)
 
-    def remove_orphan_readings(self):
-        '''Remove restricted senses that don't match any readings/kanjis.
+    def remove_restricted_readings(self, kanjis):
+        '''Remove restricted readings that don't match any of the kanjis.
 
+        See JMdict <re_restr>.
         Helper function for process_restrictions().
         '''
         # buffer
-        ts = None
+        tk = None
 
         for r in self.readings[:]:
             if r.re_restr:
-                if not ts: ts = [k.text for k in self.kanjis]
-                for restr in r.re_restr:
-                    if restr not in ts and r in self.readings:
-                        self.readings.remove(r)
+                if not tk: tk = [k.text for k in kanjis]
+                found=False
+
+                for k in tk:
+                    if k in r.re_restr:
+                        # one of our kanji is listed in the restrictions
+                        # so this reading is valid
+                        found=True
+                        break
+                if not found:
+                    # no kanji was listed; this reading doesn't apply
+                    self.readings.remove(r)
 
     def process_restrictions(self, search_params):
         '''Remove parts of entry not matching search_params.'''
@@ -66,13 +83,12 @@ class Entry():
         matchreg = search.matched_regexp(search_params)
 
         if search_params['field'] == 'kanji':
-            # show only matched kanjis.
-            self.kanjis = [k for k in self.kanjis
+            matched_kanjis = [k for k in self.kanjis
                            if matchreg.search(k.text)]
 
             # show only readings & senses that apply to matching kanji.
-            self.remove_orphan_readings()
-            self.remove_orphan_senses()
+            self.remove_restricted_readings(matched_kanjis)
+            self.remove_restricted_senses(self.readings, matched_kanjis)
 
 
         if search_params['field'] == 'reading':
@@ -80,8 +96,7 @@ class Entry():
             # highlighted).
 
             # however, if all matched readings are restricted, we remove kanjis
-            # not applying to the restriction (it would be silly to show the
-            # user 黄葉 when they asked for もみじ).
+            # not applying to the restriction.
             matched = [r for r in self.readings
                        if matchreg.search(r.text)]
 
@@ -97,8 +112,8 @@ class Entry():
                 self.kanjis = [k for k in self.kanjis
                                if k.text in restrictions]
 
-                self.remove_orphan_readings()
-                self.remove_orphan_senses()
+                self.remove_restricted_readings(self.kanjis)
+                self.remove_restricted_senses(self.readings, self.kanjis)
 
             # we DO show senses where stagr doesn't match the queried reading.
             # the rationale is that, since we're showing all readings, it would
@@ -154,8 +169,8 @@ class Entry():
                         changed=True
 
             if changed:
-                 self.remove_orphan_readings()
-                 self.remove_orphan_senses()
+                 self.remove_restricted_readings(self.kanjis)
+                 self.remove_restricted_senses(self.readings, self.kanjis)
 
 
     # this thing really needs to be better thought of
