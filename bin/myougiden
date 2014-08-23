@@ -239,7 +239,8 @@ else:
 if args.extent != 'auto':
     extents = (args.extent,)
 else:
-    extents = ('whole', 'word', 'partial')
+    # 'beginning' will be skipped when field=='glosses'
+    extents = ('whole', 'word', 'beginning', 'partial')
 
 if args.regexp:
     regexp_flags = (True,)
@@ -267,6 +268,11 @@ for regexp in regexp_flags:
                     # pass in this field, so let's adjust it.
                     sa = search_args.copy()
                     sa['extent'] = 'whole'
+            elif extent == 'beginning' and args.extent == 'auto' and field == 'gloss':
+                # we're trying all possibilities, but prefix search isn't so
+                # useful for gloss searches (rarely you search for 'man' and
+                # want to see 'manatee' but not 'human')
+                continue
             else:
                 # simple case.
                 sa = search_args.copy()
