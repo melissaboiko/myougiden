@@ -31,6 +31,7 @@ short_expansions = {
   'abbr': 'abbreviation',
   'adj-f': 'adnominal in adj. role',
   'adj-i': '-i verbal adj.',
+  'adj-ix': '-i verbal adj., yoi/ii class',
   'adj-kari': "‘-kari’ verbal adj.",
   'adj-ku': "‘-ku’ verbal adj.",
   'adj-na': '‘na’ adjectival noun',
@@ -56,6 +57,7 @@ short_expansions = {
   'chem': 'chemistry',
   'chn': "child speech",
   'col': 'colloquial',
+  'cop-da': 'copula (linking)',
   'comp': 'computing',
   'conj': 'conj.',
   'ctr': 'counter',
@@ -133,7 +135,8 @@ short_expansions = {
   'uk': 'usually in kana',
   'unc': 'unclassified',
   'v-unspec': 'verb unspecified',
-  'v1': 'ichidan verb',
+  'v1': 'ichidan (vowel-stem) verb',
+  'v1-s': 'ichidan (vowel-stem) verb - kureru special class',
   'v2a-s': "-u nidan verb",
   'v2b-k': "-bu upper nidan verb",
   'v2b-s': "-bu lower nidan verb",
@@ -166,20 +169,20 @@ short_expansions = {
   'v4r': "-ru yodan verb",
   'v4s': "-su yodan verb",
   'v4t': "-tsu yodan verb",
-  'v5aru': 'aru godan verb',
-  'v5b': "-bu godan verb",
-  'v5g': "-gu godan verb",
-  'v5k': "-ku godan verb",
-  'v5k-s': 'iku/yuku godan verb',
-  'v5m': "-mu godan verb",
-  'v5n': "-nu godan verb",
-  'v5r': "-ru godan verb",
-  'v5r-i': "-ru irregular godan verb",
-  'v5s': "-su godan verb",
-  'v5t': "-tsu godan verb",
-  'v5u': "-u godan verb",
-  'v5u-s': "-u special godan verb",
-  'v5uru': 'uru godan verb',
+  'v5aru': 'aru godan (consonant-stem) verb',
+  'v5b': "-bu godan (-b stem) verb",
+  'v5g': "-gu godan (-g stem) verb",
+  'v5k': "-ku godan (-k stem) verb",
+  'v5k-s': 'iku/yuku godan (consonant-stem) verb',
+  'v5m': "-mu godan (-m stem) verb",
+  'v5n': "-nu godan (-n stem) verb",
+  'v5r': "-ru godan (-r stem) verb",
+  'v5r-i': "-ru irregular godan (consonant-stem) verb",
+  'v5s': "-su godan (-s stem) verb",
+  'v5t': "-tsu godan (-t stem) verb",
+  'v5u': "-u godan (-w stem) verb",
+  'v5u-s': "-u special godan (consonant-stem) verb",
+  'v5uru': 'uru godan (consonant-stem) verb',
   'vi': 'intrans. verb',
   'vk': 'kuru verb',
   'vn': '-nu irregular verb',
@@ -667,6 +670,13 @@ def make_database(jmdict, sqlite, check, progress=True):
             notation_name):
 
         long_expansions[name] = value
+        if name not in short_expansions.keys():
+            # "\n\n\n": length of coffe cup ascii art
+            print("%s: new JMdict tag %s not yet programmed in myougiden\n\n\n"
+                 % (fmt('WARNING', 'warning'),
+                    fmt(name, 'parameter')))
+            short_expansions[name] = value
+
         cur.execute('''
           INSERT INTO abbreviations(abbrev, short_expansion, long_expansion)
                  VALUES (?, ?, ?);
