@@ -24,8 +24,8 @@ class Entry():
 
 
     # this thing really needs to be better thought of
-    def format_tsv(self, search_params, romajifn=None):
-        matchreg = search.matched_regexp(search_params)
+    def format_tsv(self, search_conds, romajifn=None):
+        matchreg = search.matched_regexp(search_conds)
 
         # as of 2012-02-22, no kanji or reading field uses full-width
         # semicolon.
@@ -52,13 +52,13 @@ class Entry():
 
         s = ''
 
-        s += rsep.join([r.fmt(search_params)
+        s += rsep.join([r.fmt(search_conds)
                         for r in self.readings])
-        s += "\t" + ksep.join([k.fmt(search_params)
+        s += "\t" + ksep.join([k.fmt(search_conds)
                                for k in self.kanjis])
 
         for sense in self.senses:
-            tagstr = sense.tagstr(search_params)
+            tagstr = sense.tagstr(search_conds)
             if tagstr: tagstr += ' '
 
             s += "\t%s%s" % (tagstr, gsep.join(sense.glosses))
@@ -68,8 +68,8 @@ class Entry():
 
         return s
 
-    def format_human(self, search_params, romajifn=None):
-        matchreg = search.matched_regexp(search_params)
+    def format_human(self, search_conds, romajifn=None):
+        matchreg = search.matched_regexp(search_conds)
 
         ksep = fmt('；', 'subdue')
 
@@ -99,29 +99,29 @@ class Entry():
 
         if self.kanjis:
             if not has_re_restr:
-                s += ksep.join([k.fmt(search_params) for k in self.kanjis])
-                s += rpar % (rsep.join([r.fmt(search_params) for r in self.readings]))
+                s += ksep.join([k.fmt(search_conds) for k in self.kanjis])
+                s += rpar % (rsep.join([r.fmt(search_conds) for r in self.readings]))
             else:
                 ks = []
                 for k in self.kanjis:
-                    my_r = [r.fmt(search_params) for r in self.readings
+                    my_r = [r.fmt(search_conds) for r in self.readings
                             if not r.re_restr or k.text in r.re_restr]
-                    ks.append(k.fmt(search_params)
+                    ks.append(k.fmt(search_conds)
                               + rpar % (rsep.join(my_r)))
                 s += ksep.join(ks)
         else:
-            s += rsep.join([r.fmt(search_params) for r in self.readings])
+            s += rsep.join([r.fmt(search_conds) for r in self.readings])
 
 
         for sensenum, sense in enumerate(self.senses, start=1):
             sn = fmt('%d.' % sensenum, 'misc')
 
-            tagstr = sense.tagstr(search_params)
+            tagstr = sense.tagstr(search_conds)
             if tagstr: tagstr += ' '
 
             s += "\n%s %s%s" % (sn,
                                 tagstr,
-                                gsep.join(sense.fmt_glosses(search_params)))
+                                gsep.join(sense.fmt_glosses(search_conds)))
         return s
 
 class Kanji():
@@ -136,9 +136,9 @@ class Kanji():
         self.frequent = frequent
         self.ke_inf = ke_inf
 
-    def fmt(self, search_params=None):
-        if search_params and search_params['field'] == 'kanji':
-            matchreg = search.matched_regexp(search_params)
+    def fmt(self, search_conds=None):
+        if search_conds and search_conds.field == 'kanji':
+            matchreg = search.matched_regexp(search_conds)
             t = color.color_regexp(matchreg,
                                       self.text,
                                       'kanji',
@@ -172,14 +172,14 @@ class Reading():
         self.frequent = frequent
         self.romaji = romaji
 
-    def fmt(self, search_params=None):
+    def fmt(self, search_conds=None):
         if self.romaji:
             t = self.romaji(self.text)
         else:
             t = self.text
 
-        if search_params and search_params['field'] == 'reading':
-            matchreg = search.matched_regexp(search_params)
+        if search_conds and search_conds.field == 'reading':
+            matchreg = search.matched_regexp(search_conds)
             t = color.color_regexp(matchreg,
                                       t,
                                       'reading',
@@ -268,11 +268,11 @@ class Sense():
         else:
             return ''
 
-    def fmt_glosses(self, search_params=None):
+    def fmt_glosses(self, search_conds=None):
         '''Return list of formatted strings, one per gloss.'''
 
-        if search_params and search_params['field'] == 'gloss':
-            matchreg = search.matched_regexp(search_params)
+        if search_conds and search_conds.field == 'gloss':
+            matchreg = search.matched_regexp(search_conds)
             return [color.color_regexp(matchreg,
                                        gloss)
                    for gloss in self.glosses]
