@@ -216,12 +216,10 @@ def search_by(cur, cond):
 
         else:
 
-    if frequent:
-        where_extra += 'AND entries.frequent = 1'
-
             if cond.extent == 'whole':
                 operator = '= ?'
                 query_s = query_s.replace('\\', '\\\\')
+
                 if cond.case_sensitive and cond.field == 'gloss':
                     where_extra = 'COLLATE BINARY';
 

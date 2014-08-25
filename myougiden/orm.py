@@ -61,7 +61,7 @@ class Entry():
             tagstr = sense.tagstr(search_conds)
             if tagstr: tagstr += ' '
 
-            s += "\t%s%s" % (tagstr, gsep.join(sense.glosses_try_lang(search_params['lang'])))
+            s += "\t%s%s" % (tagstr, gsep.join(sense.glosses_try_lang(search_conds.lang)))
 
         if self.is_frequent():
             s += ' ' + fmt('(P)', 'highlight')
