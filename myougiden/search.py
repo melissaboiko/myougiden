@@ -241,7 +241,7 @@ def search_by(cur, cond):
                 query_s = '%' + query_s + '%'
 
     if cond.field == 'gloss':
-        where_extra = "AND glosses.lang = '%s'" % cond.lang
+        where_extra = "AND %s.lang = '%s'" % (table, cond.lang)
     if cond.frequent:
         where_extra += ' AND %s.frequent = 1' % table
 

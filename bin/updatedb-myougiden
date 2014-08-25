@@ -479,11 +479,11 @@ def create_fts_indexes(cur):
     ''')
     cur.execute('''INSERT INTO readings_fts(readings_fts) VALUES ('optimize');''')
 
-    # cur.execute('''CREATE VIRTUAL TABLE glosses_fts USING fts4(ent_seq, sense_id, gloss, tokenize=unicode61);''')
-    cur.execute('''CREATE VIRTUAL TABLE glosses_fts USING fts4(ent_seq, sense_id, gloss, frequent, matchinfo=fts3);''')
+    # cur.execute('''CREATE VIRTUAL TABLE glosses_fts USING fts4(ent_seq, sense_id, gloss, frequent, lang, tokenize=unicode61);''')
+    cur.execute('''CREATE VIRTUAL TABLE glosses_fts USING fts4(ent_seq, sense_id, gloss, frequent, lang, matchinfo=fts3);''')
     cur.execute('''
       INSERT INTO glosses_fts
-        SELECT entries.ent_seq, senses.sense_id, glosses.gloss, glosses.frequent
+        SELECT entries.ent_seq, senses.sense_id, glosses.gloss, glosses.frequent, glosses.lang
         FROM entries JOIN senses ON entries.ent_seq = senses.ent_seq
           JOIN glosses ON senses.sense_id = glosses.sense_id
       ;
