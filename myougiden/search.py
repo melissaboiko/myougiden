@@ -40,7 +40,7 @@ class SearchConditions():
         if tt.is_kana(self.args.query_s):
             return ['reading', 'kanji'].index(self.field)
 
-        elif tt.is_latin(self.args.query_s):
+        elif tt.is_western(self.args.query_s):
             if self.args.field == 'reading':
                 # try it converted to kana first
                 return ['reading', 'gloss', 'kanji'].index(self.field)
@@ -118,9 +118,11 @@ def generate_search_conditions(args):
                         # useless combination requested, adjust
                         extent = 'whole'
 
-                if field == 'reading' and tt.is_latin(args.query_s):
-                    # 'reading' field auto-convert romaji to kana. as of this
-                    # writing, JMdict has no romaji in readingfields.
+                if field == 'reading' and tt.is_romaji(args.query_s):
+                    # 'reading' field auto-convert romaji to kana.
+
+                    # as of this writing, JMdict has no romaji in
+                    # readingfields.
                     queries = ([romkan.to_hiragana(s) for s in args.query],
                                [romkan.to_katakana(s) for s in args.query])
 

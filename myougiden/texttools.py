@@ -1,21 +1,27 @@
 import re
 
-# extracted from edict "reading" fields. TODO: cross-check with Unicode
-edict_kana='・？ヽヾゝゞー〜ぁあぃいうぇえおかがきぎくぐけげこごさざしじすずせぜそぞただちっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろわゐゑをんァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヰヱヲンヴヶ'
+ascii_chars = (r' !"#$%&()*+,./:;<=>?@\\^_`{}|~'
+               + "'"
+               + 'a-zA-Z0-9')
+
+# extracted from edict "reading" fields.
+edict_kana='・？ヽヾゝゞー〜ぁあぃいうぇえおかがきぎくぐけげこごさざしじすずせぜそぞただちっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろわゐゑをんァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヰヱヲンヴヶ 　'
 edict_kana_regexp=re.compile("^[%s]+$" % edict_kana)
 
-latin_regexp=re.compile(r'^[\]\-'
-                       + r' !"#$%&()*+,./:;<=>?@\\^_`{}|~‘’“”'
-                       + "'"
-                       + 'a-zA-Z0-9'
+# extracted from "glosses" fields from several languages, then hand-cleaned.
+edict_western='÷×≠°¡¿§®¢±→˝−áÁàâÂǎåÅäÄãāĀæćčçéÉèêěëęēíÍìîǐïīłŁñóòôÔǒöÖőõÕøōŌºœŒśŚšŠßúùûǔüǜǚÜűūýźžŽαβγΝνπаАбБвВгГдДеЕёжзЗиИйЙкКлЛмМнНоо́ОпПрРсСтТуУфФхХцЦчЧшШщъыьэЭюЮяЯ‘’“”'
+
+# TODO: cross-check edict extractions with Unicode classes
+
+western_regexp=re.compile(r'^[\]\-'
+                       + ascii_chars
+                       + edict_western
                        + ']+$')
-def is_latin(string):
-    return latin_regexp.match(string) is not None
+def is_western(string):
+    return western_regexp.match(string) is not None
 
 romaji_regexp=re.compile(r'^[\]\-'
-                         + r' !"#$%&()*+,./:;<=>?@\\^_`{}|~‘’“”'
-                         + "'"
-                         + 'a-zA-Z0-9'
+                         + ascii_chars
                          + 'āēīōūĀĒĪŌŪâêîôûÂÊÎÔÛ'
                          + ']+$')
 def is_romaji(string):
