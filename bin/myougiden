@@ -103,6 +103,8 @@ ag.add_argument('--out-kunrei', '--ok',
                 dest='out_romaji', default=None,
                 help='Convert reading to Kunrei rōmaji in output.')
 
+ag.add_argument('--debug', action='store_const', const=True, default=False)
+
 ag = ap.add_argument_group('Abbreviations help')
 ag.add_argument('--list-abbrevs', action='store_true',
         help='''List all abbreviations.''')
@@ -137,6 +139,10 @@ if color.use_color:
         pass # default
     else:
         color.style = color.LIGHTBG
+
+if args.debug:
+    common.debug = True
+
 
 args.query = ' '.join(args.query)
 

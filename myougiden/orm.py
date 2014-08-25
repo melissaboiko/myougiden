@@ -1,6 +1,7 @@
 from myougiden import config
 from myougiden import search
 from myougiden import color
+from myougiden import database
 from myougiden.color import fmt
 
 class Entry():
@@ -287,7 +288,7 @@ def fetch_entry(cur, ent_seq):
     readings = []
     senses = []
 
-    cur.execute('''SELECT
+    database.execute(cur, '''SELECT
                 kanji_id,
                 kanji,
                 ke_inf,
@@ -302,7 +303,7 @@ def fetch_entry(cur, ent_seq):
             frequent=row[3],
         ))
 
-    cur.execute('''SELECT
+    database.execute(cur, '''SELECT
                 reading_id,
                 reading,
                 re_nokanji,
@@ -320,7 +321,7 @@ def fetch_entry(cur, ent_seq):
             re_inf=row[4],
         )
 
-        cur.execute('''SELECT re_restr
+        database.execute(cur, '''SELECT re_restr
                     FROM reading_restrictions
                     WHERE reading_id = ?;''',
                     [reading.reading_id])
@@ -331,7 +332,7 @@ def fetch_entry(cur, ent_seq):
 
 
     senses = []
-    cur.execute(
+    database.execute(cur, 
         '''SELECT
         sense_id,
         pos,
@@ -352,7 +353,7 @@ def fetch_entry(cur, ent_seq):
                       dial=row[4],
                       s_inf=row[5])
 
-        cur.execute('''
+        database.execute(cur, '''
                     SELECT stagk
                     FROM sense_kanji_restrictions
                     WHERE sense_id = ?;
@@ -361,7 +362,7 @@ def fetch_entry(cur, ent_seq):
         for row in cur.fetchall():
             sense.stagk.append(row[0])
 
-        cur.execute('''
+        database.execute(cur, '''
                     SELECT stagr
                     FROM sense_reading_restrictions
                     WHERE sense_id = ?;
@@ -370,13 +371,13 @@ def fetch_entry(cur, ent_seq):
         for row in cur.fetchall():
             sense.stagr.append(row[0])
 
-        cur.execute('SELECT gloss FROM glosses WHERE sense_id = ?;', [sense.sense_id])
+        database.execute(cur, 'SELECT gloss FROM glosses WHERE sense_id = ?;', [sense.sense_id])
         for row in cur.fetchall():
             sense.glosses.append(row[0])
 
         senses.append(sense)
 
-    cur.execute('SELECT frequent FROM entries WHERE ent_seq = ?;', [ent_seq])
+    database.execute(cur, 'SELECT frequent FROM entries WHERE ent_seq = ?;', [ent_seq])
     frequent=cur.fetchone()[0]
 
     return Entry(ent_seq=ent_seq,
@@ -387,7 +388,7 @@ def fetch_entry(cur, ent_seq):
                 )
 
 def short_expansion(cur, abbrev):
-    cur.execute(''' SELECT short_expansion FROM abbreviations WHERE abbrev = ? ;''', [abbrev])
+    database.execute(cur, ''' SELECT short_expansion FROM abbreviations WHERE abbrev = ? ;''', [abbrev])
     row = cur.fetchone()
     if row:
         return row[0]
@@ -403,7 +404,7 @@ def abbrev_line(cur, abbrev):
         return None
 
 def abbrevs_table(cur):
-    cur.execute('''
+    database.execute(cur, '''
     SELECT abbrev
     FROM abbreviations
     ORDER BY abbrev

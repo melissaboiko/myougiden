@@ -1,5 +1,7 @@
 import re
 import romkan
+from myougiden import common
+from myougiden import database
 from myougiden import texttools as tt
 from copy import deepcopy
 
@@ -185,7 +187,7 @@ def search_by(cur, cond):
     if cond.frequent:
         where_extra += 'AND entries.frequent = 1'
 
-    cur.execute('''
+    database.execute(cur, '''
 SELECT DISTINCT entries.ent_seq
 FROM entries
   %s
@@ -215,7 +217,8 @@ def guess(cur, conditions):
     '''
 
     conditions.sort(key=lambda cond: cond.sort_key())
-    # import pprint; pprint.pprint(conditions)
+    if common.debug:
+        import pprint; pprint.pprint(conditions)
     for condition in conditions:
         res = search_by(cur, condition)
         if len(res) > 0:
