@@ -180,7 +180,7 @@ def search_by(cur, cond):
             if cond.extent == 'whole':
                 operator = '= ?'
                 query = query.replace('\\', '\\\\')
-                if cond.case_sensitive and field == 'gloss':
+                if cond.case_sensitive and cond.field == 'gloss':
                     where_extra = 'COLLATE BINARY';
 
             else:
