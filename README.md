@@ -25,16 +25,25 @@ Sample usage
 
 Some example queries:
 
-    $ myougiden -h             # long help
-    $ myougiden tea ceremony   # guess what kind of query to run
-    $ myougiden 茶             # ibid
-    $ myougiden -p 茶          # include partial matches
-    $ myougiden -p -f 茶       # ...but limit to frequent words
-    $ myougiden -p -f -t 茶    # ...and tab-separated, single-line output
-    $ myougiden -x '茶.'       # regexp search
-    $ myougiden chanoyu        # if no match is found, treat as rōmaji
-    $ myougiden -r kanji       # forces rōmaji
-    $ myougiden -a uK          # consult documentation for EDICT-style abbreviations
+    $ myougiden tea ceremony      # guess what kind of query to run
+    $ myougiden 茶                # ibid
+    $ myougiden chanoyu           # if no match is found, treat as rōmaji
+    $ myougiden -r kanji          # forces rōmaji
+
+    $ myougiden -w flower tea     # word search; return matches including both
+    $ myougiden -w flower -tea    # matches include word 'flower' but not 'tea'
+    $ myougiden -w 'tea ceremony' # matches include the phrase in this order
+
+    $ myougiden -b 茶             # beggining word search; starts with 茶
+
+    $ myougiden -p 茶             # partial match anywhere
+    $ myougiden -p -f 茶          # ...but limit to frequent words
+    $ myougiden -p -f -t 茶       # ...and tab-separated, single-line output
+
+    $ myougiden -x '茶$'          # regexp search
+
+    $ myougiden -h                # long help
+    $ myougiden -a uK             # consult documentation for abbreviations
 
 Screenshots
 ===========
@@ -57,7 +66,7 @@ Then, you need to compile the dictionary database at least once:
 
     $ sudo updatedb-myougiden -f
     # This command downloads and compile JMdict.
-    # It's a bit heavy, go have some coffee...
+    # It's a bit slow, go have some coffee...
 
 That's it, have fun!
 

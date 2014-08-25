@@ -25,6 +25,7 @@ class SearchConditions():
         self.extent = extent
 
         self.query = query
+        self.query_s = ' '.join(query)
         self.case_sensitive = cmdline_args.case_sensitive
         self.frequent = cmdline_args.frequent
 
@@ -35,10 +36,10 @@ class SearchConditions():
         return ['whole','word','beginning','partial'].index(self.extent)
 
     def field_sort_key(self):
-        if tt.is_kana(self.args.query):
+        if tt.is_kana(self.args.query_s):
             return ['reading', 'kanji'].index(self.field)
 
-        elif tt.is_latin(self.args.query):
+        elif tt.is_latin(self.args.query_s):
             if self.args.field == 'reading':
                 # try it converted to kana first
                 return ['reading', 'gloss', 'kanji'].index(self.field)
@@ -71,7 +72,7 @@ class SearchConditions():
 
     def __repr__(self):
         return("'%s': regexp %s, field %s, extent %s\n sort key: %s" %
-              (self.query, self.regexp, self.field, self.extent,
+              (list(self.query), self.regexp, self.field, self.extent,
                self.sort_key()))
 
 def generate_search_conditions(args):
@@ -79,7 +80,7 @@ def generate_search_conditions(args):
 
     if args.regexp:
         regexp_flags = (True,)
-    elif tt.has_regexp_special(args.query):
+    elif tt.has_regexp_special(args.query_s):
         regexp_flags = (False, True)
     else:
         regexp_flags = (False,)
@@ -87,7 +88,7 @@ def generate_search_conditions(args):
     if args.field != 'auto':
         fields = (args.field,)
     else:
-        if tt.is_kana(args.query):
+        if tt.is_kana(args.query_s):
             fields = ('kanji', 'reading')
         else:
             fields = ('kanji', 'reading', 'gloss')
@@ -103,7 +104,7 @@ def generate_search_conditions(args):
         for field in fields:
             for extent in extents:
 
-                if field == 'gloss' and extent == 'beginning':
+                if field == 'gloss' and extent == 'beginning' and args.extent == 'auto':
                     # when we search for e.g. 'man' in auto guesses, we
                     # typically don't want 'manatee' but not 'humanity'
                     continue
@@ -116,11 +117,22 @@ def generate_search_conditions(args):
                         # useless combination requested, adjust
                         extent = 'whole'
 
-                if field == 'reading' and tt.is_latin(args.query):
+                if field == 'reading' and tt.is_latin(args.query_s):
                     # 'reading' field auto-convert romaji to kana. as of this
                     # writing, JMdict has no romaji in readingfields.
-                    queries = (romkan.to_hiragana(args.query),
-                               romkan.to_katakana(args.query))
+                    queries = ([romkan.to_hiragana(s) for s in args.query],
+                               [romkan.to_katakana(s) for s in args.query])
+
+                    # romkan will convert ASCII hyphen-minus to CJKV long 'ー'
+                    # we back-convert it in start position, to preserve FTS
+                    # operator '-'.
+                    def fix_hyphen(s):
+                        if len(s) > 1 and s[0] == 'ー':
+                            s = '-' + s[1:]
+                        return s
+
+                    queries = [[fix_hyphen(s) for s in query]
+                               for query in queries]
                 else:
                     queries = (args.query,)
                 # TODO: add wide-char
@@ -134,12 +146,40 @@ def search_by(cur, cond):
     '''Main search function.  Take a SearchCondition object, return list of ent_seqs.
     '''
 
-    query = cond.query[:]
     if ((cond.field == 'gloss' and cond.case_sensitive)
         or cond.extent in ('whole', 'partial')):
         fts=False
+        query_s = cond.query_s[:]
     else:
         fts=True
+        query_prep = []
+        for cmdline_arg in cond.query:
+            # unify Japanese spaces, newlines etc. to a single space
+            re.sub('\\s+', ' ', cmdline_arg)
+
+            # if the user called
+            #
+            #    myougiden 'full phrase'
+            #
+            # or
+            #    myougiden "full phrase"
+            #
+            # we'll get a single argv with spaces in it.  in this case we
+            # translate the argv to the string
+            #
+            #    "full phrase"
+            #
+            # (including the double quotes), which is what sqlite FTS looks
+            # for.
+            if ' ' in cmdline_arg:
+                cmdline_arg = '"' + cmdline_arg + '"'
+
+            if cond.extent == 'beginning':
+                cmdline_arg += '*'
+
+            query_prep.append(cmdline_arg)
+
+        query_s = ' '.join(query_prep)
 
     if fts:
         if cond.field == 'kanji':
@@ -163,23 +203,21 @@ def search_by(cur, cond):
         operator = 'REGEXP ?'
 
         if cond.extent == 'whole':
-            query = '^' + query + '$'
+            query_s = '^' + query_s + '$'
         elif cond.extent == 'beginning':
-            query = '^' + query
+            query_s = '^' + query_s
         elif cond.extent == 'word':
-            query = r'\b' + query + r'\b'
+            query_s = r'\b' + query_s + r'\b'
 
     else:
         if fts:
             operator = 'MATCH ?'
-            if cond.extent == 'beginning':
-                query = query + '*'
 
         else:
 
             if cond.extent == 'whole':
                 operator = '= ?'
-                query = query.replace('\\', '\\\\')
+                query_s = query_s.replace('\\', '\\\\')
                 if cond.case_sensitive and cond.field == 'gloss':
                     where_extra = 'COLLATE BINARY';
 
@@ -190,13 +228,13 @@ def search_by(cur, cond):
                 operator = r"LIKE ? ESCAPE '\'"
 
                 # my editor doesn't like raw strings
-                # query = query.replace(r'\', r'\\')
-                query = query.replace('\\', '\\\\')
+                # query_s = query_s.replace(r'\', r'\\')
+                query_s = query_s.replace('\\', '\\\\')
 
-                query = query.replace('%', r'\%')
-                query = query.replace('_', r'\_')
+                query_s = query_s.replace('%', r'\%')
+                query_s = query_s.replace('_', r'\_')
 
-                query = '%' + query + '%'
+                query_s = '%' + query_s + '%'
 
     if cond.frequent:
         where_extra += ' AND %s.frequent = 1' % table
@@ -208,7 +246,7 @@ FROM %s
 WHERE %s %s %s
 ;'''
                 % (table, cond.field, operator, where_extra),
-                [query])
+                [query_s])
 
     res = []
     for row in cur.fetchall():
@@ -245,8 +283,9 @@ def matched_regexp(conds):
     '''
 
     # TODO: there's some duplication between this logic and search_by()
+    # TODO: support word search
 
-    reg = conds.query
+    reg = conds.query_s
     if not conds.regexp:
         reg = re.escape(reg)
 

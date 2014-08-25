@@ -112,7 +112,8 @@ ag.add_argument('-a', '--abbrev', metavar='ABBREV', default=None,
         help='''Print meaning of an abbreviation.''')
 
 
-ap.add_argument('query', help='Text to look for.', metavar='QUERY', nargs='*')
+ap.add_argument('query', help='Text to look for.', metavar='QUERY',
+                nargs=argparse.REMAINDER)
 
 
 args = ap.parse_args()
@@ -144,11 +145,14 @@ if args.debug:
     common.debug = True
 
 
-args.query = ' '.join(args.query)
+args.query_s = ' '.join(args.query)
 
 # case sensitivity must be handled before opening db
 if not args.case_sensitive:
-    if re.search("[A-Z]", args.query):
+    # debian sqlite currently doesn't support enhanced query syntax
+    # minus_keywords = re.sub('(NOT|OR|AND)', '', args.query_s)
+    # if (re.search("[A-Z]", minus_keywords)):
+    if (re.search("[A-Z]", args.query_s)):
         args.case_sensitive = True
 
 if not config:
@@ -203,7 +207,7 @@ elif args.abbrev:
         print('Not found!')
         sys.exit(0)
 
-if args.query == '':
+if args.query == []:
     ap.print_help()
     sys.exit(2)
 
