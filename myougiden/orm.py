@@ -22,145 +22,9 @@ class Entry():
         # TODO: more fine-grained
         return self.frequent
 
-    def remove_orphan_senses(self):
-        '''Remove restricted senses that don't match any readings/kanjis.
-
-        Helper function for process_restrictions().
-        '''
-
-        # buffer
-        ts = None
-        for s in self.senses[:]:
-            if s.stagr:
-                if not ts: ts = [r.text for r in self.readings]
-                for stagr in s.stagr:
-                    if stagr not in ts:
-                        self.senses.remove(s)
-
-        ts = None
-        for s in self.senses[:]:
-            if s.stagk:
-                if not ts: ts = [k.text for k in self.kanjis]
-                for stagk in s.stagk:
-                    if stagk not in ts:
-                        self.senses.remove(s)
-
-    def remove_orphan_readings(self):
-        '''Remove restricted senses that don't match any readings/kanjis.
-
-        Helper function for process_restrictions().
-        '''
-        # buffer
-        ts = None
-
-        for r in self.readings[:]:
-            if r.re_restr:
-                if not ts: ts = [k.text for k in self.kanjis]
-                for restr in r.re_restr:
-                    if restr not in ts and r in self.readings:
-                        self.readings.remove(r)
-
-    def process_restrictions(self, search_params):
-        '''Remove parts of entry not matching search_params.'''
-
-        matchreg = search.matched_regexp(search_params)
-
-        if search_params['field'] == 'kanji':
-            # show only matched kanjis.
-            self.kanjis = [k for k in self.kanjis
-                           if matchreg.search(k.text)]
-
-            # show only readings & senses that apply to matching kanji.
-            self.remove_orphan_readings()
-            self.remove_orphan_senses()
-
-
-        if search_params['field'] == 'reading':
-            # we show all readings, even unmatched ones (matched ones will be
-            # highlighted).
-
-            # however, if all matched readings are restricted, we remove kanjis
-            # not applying to the restriction (it would be silly to show the
-            # user 黄葉 when they asked for もみじ).
-            matched = [r for r in self.readings
-                       if matchreg.search(r.text)]
-
-            restricted = [r for r in matched
-                          if r.re_restr]
-
-            if matched == restricted:
-                restrictions = []
-                for r in restricted:
-                    for restr in r.re_restr:
-                        restrictions.append(restr)
-
-                self.kanjis = [k for k in self.kanjis
-                               if k.text in restrictions]
-
-                self.remove_orphan_readings()
-                self.remove_orphan_senses()
-
-            # we DO show senses where stagr doesn't match the queried reading.
-            # the rationale is that, since we're showing all readings, it would
-            # be confusing to omit other reading's senses.  the display will
-            # show the restriction between brackets.
-
-        elif search_params['field'] == 'gloss':
-            # consider all *matching* senses.
-            # - if at least one of them has no stagk, all kanji apply to it.
-            #   so we show all kanji.
-            # - but if all of them are restricted, we filter out all kanjis
-            #   that don't apply to any senses.
-            #
-            # likewise for readings and stagr.
-            #
-            # finally, we remove orphan senses that only applied to
-            # kanji/reading removed above.
-
-            changed=False
-            matched = []
-            for s in self.senses:
-                for g in s.glosses:
-                    if matchreg.search(g):
-                        matched.append(s)
-                        break
-
-            restricted = [s for s in matched if s.stagk]
-            if matched == restricted:
-                # then some kanji may be spurious
-
-                restrictions = []
-                for s in matched:
-                    for stagk in s.stagk:
-                        restrictions.append(stagk)
-
-                for kanji in self.kanjis[:]:
-                    if kanji.text not in restrictions:
-                        self.kanjis.remove(kanji)
-                        changed=True
-
-            restricted = [s for s in matched if s.stagr]
-            if matched == restricted:
-                # then some readings may be spurious
-
-                restrictions = []
-                for s in matched:
-                    for stagr in s.stagr:
-                        restrictions.append(stagr)
-
-                for reading in self.readings[:]:
-                    if reading.text not in restrictions:
-                        self.readings.remove(reading)
-                        changed=True
-
-            if changed:
-                 self.remove_orphan_readings()
-                 self.remove_orphan_senses()
-
 
     # this thing really needs to be better thought of
     def format_tsv(self, search_params, romajifn=None):
-        self.process_restrictions(search_params)
         matchreg = search.matched_regexp(search_params)
 
         # as of 2012-02-22, no kanji or reading field uses full-width
@@ -205,7 +69,6 @@ class Entry():
         return s
 
     def format_human(self, search_params, romajifn=None):
-        self.process_restrictions(search_params)
         matchreg = search.matched_regexp(search_params)
 
         ksep = fmt('；', 'subdue')

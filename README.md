@@ -12,7 +12,7 @@ Features:
  - Full color output, including partial match highlighting.  No seriously, this
    thing has a *lot* of color.  I mean we're talking Takashi Murakami material
    right here.
- - Handles JMdict restricted readings and senses intelligently.
+ - Displays JMdict restricted readings and senses.
  - Auto-pager, auto-color, auto-nice, auto-greppable output, and other small
    niceties.
 
