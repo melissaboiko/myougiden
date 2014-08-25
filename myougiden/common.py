@@ -5,6 +5,8 @@ import re
 from myougiden import config
 from myougiden.color import fmt
 
+debug = False
+
 # from http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
 # convenience function because python < 3.2 has no exist_ok
 def mkdir_p(path):
@@ -53,7 +55,8 @@ def version(cur):
         psutil_version = None
 
     if cur:
-        cur.execute('''
+        from myougiden import database
+        database.execute(cur, '''
                     SELECT dbversion, jmdict_mtime
                     FROM versions;
                     ''')

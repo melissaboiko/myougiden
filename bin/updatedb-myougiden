@@ -306,11 +306,8 @@ def create_tables(cur, jmdictxml):
 
     # ent_seq is the id in JMdict.
     #
-    # we expand each JMdict entry into several entries; so we have
-    # our own ids.
-    #
-    # 'frequent' is true if at least one ke_pri or re_pri has a 'good' value.
-    # this is roughly equivalent to the '(P)' flag in EDICT.
+    # 'frequent' is true if at least one kanji or one reading is marked
+    # 'frequent'.
     cur.execute('''
       CREATE TABLE
       entries (
@@ -325,7 +322,9 @@ def create_tables(cur, jmdictxml):
     # rather than creating an entire separate table, we just list all
     # in a single row, separated by ';'.
     #
-    # 'frequent', from ke_pri, is set from criteria similar to (P) in EDICT.
+    # 'frequent' is true following the criteria from (P) in edict, i.e.
+    # "entries with news1, ichi1, spec1 and gai1 values"
+    # ~plus~ spec2, which is undocumented.
     cur.execute('''
       CREATE TABLE
       kanjis (
@@ -338,6 +337,7 @@ def create_tables(cur, jmdictxml):
       );
     ''')
 
+    # see table kanjis for 'frequent'
     cur.execute('''
       CREATE TABLE
       readings (
@@ -406,13 +406,16 @@ def create_tables(cur, jmdictxml):
                  );
                 ''')
 
+    # 'frequent' is a mirror of the corresponding entry.frequent
+    # we double it in database to save up a JOIN at runtime
     cur.execute('''
       CREATE TABLE
       glosses (
         ent_seq INTEGER NOT NULL,
+        frequent INTEGER NOT NULL,
         sense_id INTEGER NOT NULL,
         gloss_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        gloss TEXT NOT NULL,
+        gloss TEXT NOT NULL COLLATE NOCASE,
         lang TEXT DEFAULT 'eng',
         FOREIGN KEY (ent_seq) REFERENCES entries(ent_seq),
         FOREIGN KEY (sense_id) REFERENCES senses(sense_id)
@@ -420,7 +423,6 @@ def create_tables(cur, jmdictxml):
     ''')
 
 def create_indexes(cur):
-
     cur.execute('''
       CREATE INDEX kanjis_ent_seq ON kanjis (ent_seq);
     ''')
@@ -446,7 +448,7 @@ def create_indexes(cur):
       CREATE INDEX readings_reading ON readings (reading);
     ''')
     cur.execute('''
-      CREATE INDEX glosses_gloss ON glosses (gloss);
+      CREATE INDEX glosses_gloss ON glosses (gloss COLLATE NOCASE);
     ''')
     cur.execute('''
       CREATE INDEX stagk_sense_id ON sense_kanji_restrictions(sense_id);
@@ -454,6 +456,40 @@ def create_indexes(cur):
     cur.execute('''
       CREATE INDEX stagr_sense_id ON sense_reading_restrictions(sense_id);
     ''')
+
+def create_fts_indexes(cur):
+    # unicode61 and icu currently not available on debian
+    # cur.execute('''CREATE VIRTUAL TABLE kanjis_fts USING fts4(ent_seq, kanji, tokenize=unicode61);''')
+    cur.execute('''CREATE VIRTUAL TABLE kanjis_fts USING fts4(ent_seq, kanji, frequent, matchinfo=fts3);''')
+    cur.execute('''
+      INSERT INTO kanjis_fts
+        SELECT entries.ent_seq, kanjis.kanji, kanjis.frequent
+        FROM entries JOIN kanjis ON entries.ent_seq = kanjis.ent_seq
+      ;
+    ''')
+    cur.execute('''INSERT INTO kanjis_fts(kanjis_fts) VALUES ('optimize');''')
+
+    # cur.execute('''CREATE VIRTUAL TABLE readings_fts USING fts4(ent_seq, reading, tokenize=unicode61);''')
+    cur.execute('''CREATE VIRTUAL TABLE readings_fts USING fts4(ent_seq, reading, frequent, matchinfo=fts3);''')
+    cur.execute('''
+      INSERT INTO readings_fts
+        SELECT entries.ent_seq, readings.reading, readings.frequent
+        FROM entries JOIN readings ON entries.ent_seq = readings.ent_seq
+      ;
+    ''')
+    cur.execute('''INSERT INTO readings_fts(readings_fts) VALUES ('optimize');''')
+
+    # cur.execute('''CREATE VIRTUAL TABLE glosses_fts USING fts4(ent_seq, sense_id, gloss, tokenize=unicode61);''')
+    cur.execute('''CREATE VIRTUAL TABLE glosses_fts USING fts4(ent_seq, sense_id, gloss, frequent, matchinfo=fts3);''')
+    cur.execute('''
+      INSERT INTO glosses_fts
+        SELECT entries.ent_seq, senses.sense_id, glosses.gloss, glosses.frequent
+        FROM entries JOIN senses ON entries.ent_seq = senses.ent_seq
+          JOIN glosses ON senses.sense_id = glosses.sense_id
+      ;
+    ''')
+    cur.execute('''INSERT INTO glosses_fts(glosses_fts) VALUES ('optimize');''')
+
 
 def count_entries(jmdict):
     count=0
@@ -526,12 +562,6 @@ def update_coffee(signum=None, frame=None):
     print_coffee()
 
 def insert_entries(cur, entries):
-    # in order to generate tuples later, we need to decide on IDs beforehand.
-    cur.execute('''SELECT max(ent_seq) FROM entries;''')
-    last_id = cur.fetchone()[0] or 0
-    for i, e in enumerate(entries, 1):
-        e.ent_seq = last_id + i
-
     cur.executemany('''INSERT INTO entries
                     (ent_seq, frequent)
                     VALUES (?, ?);''',
@@ -612,13 +642,14 @@ def insert_entries(cur, entries):
                     VALUES (?, ?);''',
                     tuples)
 
-    tuples = [(e.ent_seq, s.sense_id, gloss_tuple[0], gloss_tuple[1])
+    tuples = [(e.ent_seq, e.frequent, s.sense_id,
+               gloss_tuple[0], gloss_tuple[1])
               for e in entries
                 for s in e.senses
                   for gloss_tuple in s.glosses]
     cur.executemany('''INSERT INTO glosses
-                    (ent_seq, sense_id, gloss, lang)
-                    VALUES (?, ?, ?, ?)''',
+                    (ent_seq, frequent, sense_id, gloss, lang)
+                    VALUES (?, ?, ?, ?, ?)''',
                     tuples)
 
 
@@ -744,7 +775,7 @@ def make_database(jmdict, sqlite, check, progress=True):
 
         elif el == 'ke_pri':
             # EDICT '(P)' criteria
-            if b.cdata in ('news1', 'ichi1', 'spec1', 'gai1'):
+            if b.cdata in ('news1', 'ichi1', 'spec1', 'spec2', 'gai1'):
                 b.kanji.frequent = True
                 b.entry.frequent = True
 
@@ -761,7 +792,8 @@ def make_database(jmdict, sqlite, check, progress=True):
             b.reading.re_nokanji = True
 
         elif el == 're_pri':
-            if b.cdata in ('news1', 'ichi1', 'spec1', 'gai1'):
+            # EDICT '(P)' criteria
+            if b.cdata in ('news1', 'ichi1', 'spec1', 'spec2', 'gai1'):
                 b.reading.frequent = True
                 b.entry.frequent = True
 
@@ -842,8 +874,10 @@ def make_database(jmdict, sqlite, check, progress=True):
         update_coffee()
         signal.signal(signal.SIGALRM, signal.SIG_IGN)
 
-    print('%s...' % fmt('Creating indexes', 'info'))
+    print('%s...' % fmt('Creating regular indexes', 'info'))
     create_indexes(cur)
+    print('%s...' % fmt('Creating indexes for full text search', 'info'))
+    create_fts_indexes(cur)
 
     cur.close()
     con.commit()

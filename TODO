@@ -27,13 +27,15 @@
    - clean abbreviations that are not being used
      - add our own symbols: ※、＊、(P)
    - more fine-grained --frequent (support ke_pri, re_pri)
+     - order things by frequency, both entries list and in-entry enumerations
+       (readings etc.)
    - support all JMdict languages
 
    - go beyond JMdict:
      - pitch-accent data (from where?)
      - names (JMnedict)?
      - famous people/place names from wikipedia etc?
-     - order by frequency?
+     - other frequency wordlists?
 
  - output:
    - make match coloring work for rōmaji output

@@ -6,6 +6,7 @@ import sqlite3 as sql
 from myougiden import config
 from myougiden.texttools import get_regexp
 from myougiden.color import fmt
+import myougiden.common
 
 def regexp_sensitive(pattern, field):
     '''SQL hook function for case-sensitive regexp matching.'''
@@ -17,17 +18,17 @@ def regexp_insensitive(pattern, field):
     reg = get_regexp(pattern, re.I)
     return reg.search(field) is not None
 
-def match_word_sensitive(word, field):
-    '''SQL hook function for whole-word, case-sensitive, non-regexp matching.'''
-
-    reg = get_regexp(r'\b' + re.escape(word) + r'\b', 0)
-    return reg.search(field) is not None
-
-def match_word_insensitive(word, field):
-    '''SQL hook function for whole-word, case-sensitive, non-regexp matching.'''
-
-    reg = get_regexp(r'\b' + re.escape(word) + r'\b', re.I)
-    return reg.search(field) is not None
+#def match_word_sensitive(word, field):
+#    '''SQL hook function for whole-word, case-sensitive, non-regexp matching.'''
+#
+#    reg = get_regexp(r'\b' + re.escape(word) + r'\b', 0)
+#    return reg.search(field) is not None
+#
+#def match_word_insensitive(word, field):
+#    '''SQL hook function for whole-word, case-sensitive, non-regexp matching.'''
+#
+#    reg = get_regexp(r'\b' + re.escape(word) + r'\b', re.I)
+#    return reg.search(field) is not None
 
 class DatabaseAccessError(Exception):
     '''Generic error accessing database.'''
@@ -87,7 +88,7 @@ def opendb(case_sensitive=False):
         raise DatabaseAccessError(str(e))
 
     try:
-        cur.execute('SELECT dbversion FROM versions;')
+        execute(cur, ('SELECT dbversion FROM versions;'))
         dbversion = cur.fetchone()[0]
     except sql.OperationalError:
         raise DatabaseAccessError("Couldn't read database to check version")
@@ -97,12 +98,16 @@ def opendb(case_sensitive=False):
 
     if case_sensitive:
         con.create_function('regexp', 2, regexp_sensitive)
-        con.create_function('match', 2, match_word_sensitive)
-        cur.execute('PRAGMA case_sensitive_like = 1;')
+        # con.create_function('match', 2, match_word_sensitive)
+        execute(cur, 'PRAGMA case_sensitive_like = 1;')
     else:
         con.create_function('regexp', 2, regexp_insensitive)
-        con.create_function('match', 2, match_word_insensitive)
-        cur.execute('PRAGMA case_sensitive_like = 0;')
+        # con.create_function('match', 2, match_word_insensitive)
+        execute(cur, 'PRAGMA case_sensitive_like = 0;')
 
     return con, cur
 
+def execute(cur, *args):
+    if myougiden.common.debug:
+        print(*args)
+    cur.execute(*args)
