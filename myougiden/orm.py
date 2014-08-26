@@ -292,6 +292,8 @@ class Sense():
             return [color.color_regexp(matchreg,
                                        gloss)
                    for gloss in self.glosses_try_lang(search_conds.lang)]
+        else:
+            return self.glosses_try_lang(search_conds.lang)
 
 def fetch_entry(cur, ent_seq):
     '''Return Entry object..'''
