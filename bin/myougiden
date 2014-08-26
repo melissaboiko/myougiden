@@ -12,7 +12,7 @@ from myougiden import orm
 from myougiden import common
 from myougiden import texttools as tt
 from myougiden import search
-from myougiden.common import GLOSS_LANGS
+from myougiden.common import ISO639_1TO2
 from myougiden.color import fmt
 
 ap = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
@@ -35,7 +35,7 @@ ag.add_argument('-g', '--gloss', '--meaning', action='store_const', dest='field'
 ag.add_argument('-l', '--lang', action='store', dest='lang', default=None,
                 help='''Which language to find the gloss in.
 Available languages: %s
-Default: guess from locale; fallback to English.''' % ', '.join(sorted(GLOSS_LANGS.keys())))
+Default: guess from locale; fallback to English.''' % ', '.join(sorted(ISO639_1TO2.keys())))
 
 ag = ap.add_argument_group('Query options')
 ag.add_argument('--case-sensitive', '--sensitive', action='store_true',
@@ -222,12 +222,12 @@ if args.lang == None:
     loc = locale.getlocale()
     if loc and loc[0]:
         locale_lang = loc[0][0:2]
-        if locale_lang in GLOSS_LANGS.keys():
-            args.lang = GLOSS_LANGS[locale_lang]
+        if locale_lang in ISO639_1TO2.keys():
+            args.lang = ISO639_1TO2[locale_lang]
 else:
-    if args.lang not in GLOSS_LANGS.values():
-        if args.lang in GLOSS_LANGS.keys():
-            args.lang = GLOSS_LANGS[args.lang]
+    if args.lang not in ISO639_1TO2.values():
+        if args.lang in ISO639_1TO2.keys():
+            args.lang = ISO639_1TO2[args.lang]
         else:
             print("Error: unknown language %s" % args.lang)
             sys.exit(2)
