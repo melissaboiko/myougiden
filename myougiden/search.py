@@ -198,7 +198,7 @@ def search_by(cur, cond):
 
     where_extra = ''
 
-    if cond.regexp:
+    if cond.regexp or (not fts and cond.extent == 'word'):
         # case sensitivity set for operator in opendb()
         operator = 'REGEXP ?'
 
