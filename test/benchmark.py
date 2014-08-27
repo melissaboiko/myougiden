@@ -75,14 +75,14 @@ builtins.__dict__.update(locals())
 # about the reason for using min(), see
 # http://docs.python.org/3/library/timeit.html#timeit.Timer.repeat
 quick = []
-quick.append(min(timeit.repeat('quicksearch1()', repeat=5, number=5)))
-quick.append(min(timeit.repeat('quicksearch2()', repeat=5, number=5)))
-quick.append(min(timeit.repeat('quicksearch3()', repeat=5, number=5)))
+quick.append(min(timeit.repeat('quicksearch1()', repeat=24, number=1)))
+quick.append(min(timeit.repeat('quicksearch2()', repeat=24, number=1)))
+quick.append(min(timeit.repeat('quicksearch3()', repeat=24, number=1)))
 
 slow = []
-slow.append(min(timeit.repeat('slowsearch1()', repeat=5, number=5)))
-slow.append(min(timeit.repeat('slowsearch2()', repeat=5, number=5)))
-slow.append(min(timeit.repeat('slowsearch3()', repeat=5, number=5)))
+slow.append(min(timeit.repeat('slowsearch1()', repeat=25, number=1)))
+slow.append(min(timeit.repeat('slowsearch2()', repeat=25, number=1)))
+slow.append(min(timeit.repeat('slowsearch3()', repeat=25, number=1)))
 
 print('Quick: ', quick)
 print('Slow: ', slow)
