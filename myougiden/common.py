@@ -390,3 +390,16 @@ ISO639_1TO2 = {
 'zh': 'chi',
 'zu': 'zul',
 }
+
+# TODO: get from the XML at updatedb time
+JMDICT_LANGS = [
+    'dut',
+    'eng',
+    'fre',
+    'ger',
+    'hun',
+    'rus',
+    'slv',
+    'spa',
+    'swe',
+]
