@@ -34,9 +34,9 @@ ag.add_argument('-g', '--gloss', '--meaning', action='store_const', dest='field'
                 help='''Return entries matching query on glosses (translations/meaning).''')
 
 ag.add_argument('-l', '--lang', action='store', dest='lang', default=None,
-                help='''Which language to find the gloss in.
-Available languages: %s
-Default: guess from locale; fallback to English.''' % ', '.join(sorted(JMDICT_LANGS)))
+                help='''Which language to find the gloss in, if applicable.
+Available language: %s
+Default: guess from locale.''' % ', '.join(sorted(JMDICT_LANGS)))
 
 ag = ap.add_argument_group('Query options')
 ag.add_argument('--case-sensitive', '--sensitive', action='store_true',
