@@ -154,14 +154,16 @@ def guess_background():
             p.wait()
             for line in p.stdout:
                 if re.search(b'background:', line):
-                    rgb = line.strip().split()[-1].decode()
-                    if luma(rgb) > 128:
-                        return 'light'
-                    else:
-                        return 'dark'
+                    xcolor = line.strip().split()[-1].decode()
+                    if re.match('#[0-9a-f]{6}$', xcolor):
+                        if luma(xcolor) > 128:
+                            return 'light'
+                        else:
+                            return 'dark'
+                    # TODO: get color names colors from rgb.txt
 
 
-    # TODO: there's a very complex method to query xterm.
+    # TODO?: there's a very complex method to query xterm;
     # but it's complex, and screen breaks it anyway.
 
     return None
