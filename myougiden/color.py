@@ -122,11 +122,15 @@ def guess_background():
     # this basically works only for rxvt. vim uses it.
     v = os.getenv('COLORFGBG')
     if v:
-        bg = int(v.split(';')[-1])
-        if (0 <= bg <= 6) or (bg == 8):
-            return 'dark'
-        else:
-            return 'light'
+        bg = v.split(';')[-1]
+        try:
+            bg = int(bg)
+            if (0 <= bg <= 6) or (bg == 8):
+                return 'dark'
+            else:
+                return 'light'
+        except ValueError:
+            pass
 
     # speaking of vim...
     vimrc = os.path.expanduser('~/.vimrc')
