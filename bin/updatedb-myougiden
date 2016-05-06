@@ -234,10 +234,12 @@ def sigcleanup(signum, stack):
     cleanup()
     sys.exit(1)
 
-for sn in (signal.SIGHUP, signal.SIGINT, signal.SIGQUIT, signal.SIGILL,
-        signal.SIGABRT, signal.SIGFPE, signal.SIGSEGV, signal.SIGPIPE,
-        signal.SIGTERM, signal.SIGBUS):
-    signal.signal(sn, sigcleanup)
+# apparently Windows has no SIGHUP, so we test the existence of signal names
+# before trying to trap them.
+for sn in ('SIGHUP', 'SIGINT', 'SIGQUIT', 'SIGILL', 'SIGABRT', 'SIGFPE',
+           'SIGSEGV', 'SIGPIPE', 'SIGTERM', 'SIGBUS'):
+    if hasattr(signal, sn):
+        signal.signal(getattr(signal, sn), sigcleanup)
 
 def nice_self():
     problem=False
