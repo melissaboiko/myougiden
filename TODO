@@ -42,6 +42,7 @@
    - better wrapping for "human" output
    - colored --help! (argparse extension?)
    - think hard about tsv output
+   - highlight official orthography from Jōyō table somehow
 
  - better documentation
    - document tsv output
