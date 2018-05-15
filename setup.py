@@ -43,6 +43,7 @@ setup(name='myougiden',
           'romkan',
           'termcolor',
           ],
+      python_requires='>=3',
       classifiers=[
           'Development Status :: 4 - Beta',
           'Environment :: Console',
